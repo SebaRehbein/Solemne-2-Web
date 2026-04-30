@@ -14,4 +14,4 @@ El objetivo principal es desarrollar un juego que funcione en el navegador utili
 * **Calidad de Software:** Implementación de pruebas unitarias para asegurar que la lógica del juego sea robusta.
 
 ## Concepto del Juego
-"The Glitched Ascendance" es un juego de plataformas en 2D que combina la dificultad extrema de los juegos tipo *I Wanna Be The Guy* con elementos de progresión, donde el jugador puede mejorar sus estadísticas y enfrentar jefes con mecánicas cambiantes.
+Es un juego de plataformas en 2D que combina la dificultad extrema de los juegos tipo *I Wanna Be The Guy* con elementos de progresión, donde el jugador puede mejorar sus estadísticas y enfrentar jefes con mecánicas cambiantes.
