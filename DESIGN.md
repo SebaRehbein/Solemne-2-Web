@@ -1,4 +1,4 @@
-# DESIGN.md - Documento de Diseño: "The Glitched Ascendance"
+# DESIGN.md - Documento de Diseño: "Snack and Glory"
 
 ## 1. Descripción del Juego
 
