@@ -7,7 +7,7 @@
 * [ ] Inicializar el proyecto base con el framework React y el gestor de paquetes `pnpm`.
 
 **Estado:**
-* Completado: 
+* Completado: COMPLETADO
 * Pendiente: 
 
 ## Semana 2 (06 de Mayo - 12 de Mayo): DevOps, Creación de Recursos y Motor Base
