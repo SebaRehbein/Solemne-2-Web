@@ -1,4 +1,4 @@
-# DESIGN.md - Documento de Diseño: "Snack and Glory"
+# DESIGN.md - Documento de Diseño: "Berry bad luck"
 
 ## 1. Descripción del Juego
 
