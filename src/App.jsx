@@ -5,7 +5,7 @@ export default function App() {
   const gameRef = useRef(null);
 
   useEffect(() => {
-    // CLASE 1: La Configuración
+    // CLASE 1: configuración
     const config = {
       type: Phaser.AUTO,
       width: 800,
@@ -15,11 +15,12 @@ export default function App() {
       physics: {
         default: 'arcade',
         arcade: {
-          gravity: { y: 800 }, // Fuerza de gravedad
+          gravity: { y: 800 }, //gravedad
           debug: false // Cambia a true para ver las "hitboxes"
         }
       },
       scene: {
+        preload: preload,
         create: create,
         update: update
       }
@@ -29,43 +30,64 @@ export default function App() {
     let player;
     let cursors;
 
-    // CLASE 2: Creación del Mundo
-    function create() {
-      // 1. El Suelo (Cuerpo Estático)
-      const ground = this.add.rectangle(400, 380, 800, 40, 0x2ecc71); // Verde
-      this.physics.add.existing(ground, true); // true = estático
+    // CLASE 2: Mundo
+    function preload() {
+      // CÁMBIALO A ESTO EN EL PRELOAD:
+      this.load.spritesheet('idle', 'assets/animaciones/Main_Characters/Shuri/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
+      this.load.spritesheet('walk', 'assets/animaciones/Main_Characters/Shuri/Run (32x32).png', { frameWidth: 32, frameHeight: 32 });
+      this.load.spritesheet('jump', 'assets/animaciones/Main_Characters/Shuri/Jump (32x32).png', { frameWidth: 32, frameHeight: 32 });
+      this.load.spritesheet('fall', 'assets/animaciones/Main_Characters/Shuri/Fall (32x32).png', { frameWidth: 32, frameHeight: 32 });
+    }
 
-      // 2. El Personaje (Cuerpo Dinámico)
-      player = this.add.rectangle(100, 200, 40, 40, 0xe74c3c); // Cuadrado Rojo
-      this.physics.add.existing(player);
       
-      // Propiedades del personaje
-      player.body.setBounce(0.1); 
-      player.body.setCollideWorldBounds(true); 
+    function create() {
+      // Suelo
+      const ground = this.add.rectangle(400, 380, 800, 40, 0x2ecc71);
+      this.physics.add.existing(ground, true);
 
-      // 3. Reglas de Colisión
+      // Personaje
+      player = this.physics.add.sprite(100, 200, 'idle');
+      player.setBounce(0.1);
+      player.setCollideWorldBounds(true);
+
       this.physics.add.collider(player, ground);
 
-      // 4. Controles
       cursors = this.input.keyboard.createCursorKeys();
+
+      // Animaciones
+      this.anims.create({ key: 'walk', frames: [{ key: 'walk' }], frameRate: 10, repeat: -1 });
+      this.anims.create({ key: 'jump', frames: [{ key: 'jump' }], frameRate: 10, repeat: 0 });
+      this.anims.create({ key: 'fall', frames: [{ key: 'fall' }], frameRate: 10, repeat: -1 });
     }
 
-    // CLASE 3: El Ciclo de Juego (Game Loop)
+
+    // CLASE 3: Juego (Game Loop)
     function update() {
-      // Movimiento Horizontal
       if (cursors.left.isDown) {
-        player.body.setVelocityX(-300);
+        player.setVelocityX(-200);
+        player.anims.play('walk', true);
+        player.flipX = true; // mirar a la izquierda
       } else if (cursors.right.isDown) {
-        player.body.setVelocityX(300);
+        player.setVelocityX(200);
+        player.anims.play('walk', true);
+        player.flipX = false;
       } else {
-        player.body.setVelocityX(0); // Frena si no tocas nada
+        player.setVelocityX(0);
+        player.setTexture('idle'); // quieto
       }
 
-      // Salto (Solo si está tocando el suelo)
+      // Salto
       if (cursors.up.isDown && player.body.touching.down) {
-        player.body.setVelocityY(-450);
+        player.setVelocityY(-450);
+        player.anims.play('jump', true);
+      }
+
+      // Caída
+      if (!player.body.touching.down && player.body.velocity.y > 0) {
+        player.anims.play('fall', true);
       }
     }
+
 
     // Limpieza de React al desmontar
     return () => {
