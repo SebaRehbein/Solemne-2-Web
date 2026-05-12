@@ -19,8 +19,8 @@
 * [ ] Enlazar el personaje al mapa: implementar colisiones con el entorno y las primeras trampas.
 
 **Estado:**
-* Completado: 
-* Pendiente: 
+* Completado: Completado el resto
+* Pendiente: GitHub Actions
 
 ## Semana 3 (13 de Mayo - 19 de Mayo): Clases, Jefes y Testing
 **Tareas Planificadas:**
