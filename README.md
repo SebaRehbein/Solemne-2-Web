@@ -1,16 +1,17 @@
-# React + Vite
+# Solemne 2 Proyecto Juego Web (nombre aun en discusión)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Información del Proyecto
+* **Asignatura:** Aplicaciones y Tecnologías para la Web.
+* **Profesor:** Cristhian Aguilera.
+* **Integrantes:** Sebastian Rehbein y Mathias Carrera.
+* **Descripción:** Proyecto enfocado en la construcción de un juego web funcional utilizando un framework de frontend y flujos de trabajo profesionales.
 
-Currently, two official plugins are available:
+## ¿En qué consiste el trabajo?
+El objetivo principal es desarrollar un juego que funcione en el navegador utilizando **React** y el gestor de paquetes **pnpm**. Más allá del código del juego, el proyecto evalúa la implementación de:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+* **Documentación:** Registro de avances semanales y diseño detallado del sistema.
+* **DevOps:** Uso de **Docker** para la contenedorización y **GitHub Actions** para automatizar pruebas y despliegue.
+* **Calidad de Software:** Implementación de pruebas unitarias para asegurar que la lógica del juego sea robusta.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Concepto del Juego
+Es un juego de plataformas en 2D que combina la dificultad extrema de los juegos tipo *I Wanna Be The Guy* con elementos de progresión, donde el jugador puede mejorar sus estadísticas y enfrentar jefes con mecánicas cambiantes.
