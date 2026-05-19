@@ -54,37 +54,68 @@ export default function App() {
 
       cursors = this.input.keyboard.createCursorKeys();
 
-      // Animaciones
-      this.anims.create({ key: 'walk', frames: [{ key: 'walk' }], frameRate: 10, repeat: -1 });
-      this.anims.create({ key: 'jump', frames: [{ key: 'jump' }], frameRate: 10, repeat: 0 });
-      this.anims.create({ key: 'fall', frames: [{ key: 'fall' }], frameRate: 10, repeat: -1 });
+      // Animaciones corregidas utilizando generateFrameNumbers
+      this.anims.create({ 
+        key: 'idle', 
+        frames: this.anims.generateFrameNumbers('idle'), 
+        frameRate: 10, 
+        repeat: -1 // -1 indica que se repetirá en bucle infinito
+      });
+      this.anims.create({ 
+        key: 'walk', 
+        frames: this.anims.generateFrameNumbers('walk'), 
+        frameRate: 15, // Puedes ajustar la velocidad aquí si se ve muy lento/rápido
+        repeat: -1 
+      });
+      this.anims.create({ 
+        key: 'jump', 
+        frames: this.anims.generateFrameNumbers('jump'), 
+        frameRate: 10, 
+        repeat: 0 // 0 indica que solo se reproduce una vez
+      });
+      this.anims.create({ 
+        key: 'fall', 
+        frames: this.anims.generateFrameNumbers('fall'), 
+        frameRate: 10, 
+        repeat: -1 
+      });
     }
 
 
     // CLASE 3: Juego (Game Loop)
+    // CLASE 3: Juego (Game Loop)
     function update() {
+      // 1. Físicas: Movimiento horizontal puro
       if (cursors.left.isDown) {
         player.setVelocityX(-200);
-        player.anims.play('walk', true);
-        player.flipX = true; // mirar a la izquierda
+        player.flipX = true; 
       } else if (cursors.right.isDown) {
         player.setVelocityX(200);
-        player.anims.play('walk', true);
         player.flipX = false;
       } else {
         player.setVelocityX(0);
-        player.setTexture('idle'); // quieto
       }
 
-      // Salto
+      // 2. Físicas: Salto
       if (cursors.up.isDown && player.body.touching.down) {
         player.setVelocityY(-450);
-        player.anims.play('jump', true);
       }
 
-      // Caída
-      if (!player.body.touching.down && player.body.velocity.y > 0) {
-        player.anims.play('fall', true);
+      // 3. Animaciones: Condicionadas estrictamente por el estado físico
+      if (!player.body.touching.down) {
+        // Si está en el aire, evaluamos la velocidad vertical
+        if (player.body.velocity.y < 0) {
+          player.anims.play('jump', true);
+        } else {
+          player.anims.play('fall', true);
+        }
+      } else {
+        // Si está en el suelo, evaluamos si existe desplazamiento horizontal
+        if (player.body.velocity.x !== 0) {
+          player.anims.play('walk', true);
+        } else {
+          player.anims.play('idle', true);
+        }
       }
     }
 
