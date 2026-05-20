@@ -5,18 +5,22 @@ export default function App() {
   const gameRef = useRef(null);
 
   useEffect(() => {
-    // CLASE 1: configuración
+    // 1. Configuración del motor adaptada a las dimensiones de tu mapa (30x20 bloques de 16px)
     const config = {
       type: Phaser.AUTO,
-      width: 800,
-      height: 400,
+      width: 480,  
+      height: 320,
+      pixelArt: true, 
+      scale: {
+        zoom: 1.5, // Amplía el lienzo de forma limpia (mantiene el Pixel Art nítido)
+      },
       backgroundColor: '#87CEEB', // Cielo celeste
       parent: gameRef.current,
       physics: {
         default: 'arcade',
         arcade: {
-          gravity: { y: 800 }, //gravedad
-          debug: false // Cambia a true para ver las "hitboxes"
+          gravity: { y: 800 }, // Fuerza de gravedad
+          debug: false // Cambiar a true para visualizar las cajas de colisión
         }
       },
       scene: {
@@ -30,48 +34,69 @@ export default function App() {
     let player;
     let cursors;
 
-    // CLASE 2: Mundo
+    // 2. Carga de recursos (Assets)
     function preload() {
-      // CÁMBIALO A ESTO EN EL PRELOAD:
+      // Spritesheets del personaje
       this.load.spritesheet('idle', 'assets/animaciones/Main_Characters/Shuri/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet('walk', 'assets/animaciones/Main_Characters/Shuri/Run (32x32).png', { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet('jump', 'assets/animaciones/Main_Characters/Shuri/Jump (32x32).png', { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet('fall', 'assets/animaciones/Main_Characters/Shuri/Fall (32x32).png', { frameWidth: 32, frameHeight: 32 });
+
+      // Elementos del mapa de Tiled
+      this.load.image('tiles-terrain', 'assets/Terrain (16x16).png');
+      this.load.tilemapTiledJSON('mapa-nivel1', 'assets/LevelTest.tmj');
     }
 
-      
+    // 3. Inicialización de los objetos del juego
     function create() {
-      // Suelo
-      const ground = this.add.rectangle(400, 380, 800, 40, 0x2ecc71);
-      this.physics.add.existing(ground, true);
+      // Instanciar el mapa base
+      const map = this.make.tilemap({ key: 'mapa-nivel1' });
 
-      // Personaje
-      player = this.physics.add.sprite(100, 200, 'idle');
+      // Vincular el tileset de Tiled con la imagen cargada
+      const tileset = map.addTilesetImage('terrain', 'tiles-terrain');
+
+      // Crear las capas del escenario respetando el orden y nombres de Tiled
+      const capaMarco = map.createLayer('marco', tileset, 0, 0);
+      const capaTerreno = map.createLayer('terreno', tileset, 0, 0);
+
+      // Habilitar colisiones en todas las celdas pintadas (excluyendo el fondo transparente -1)
+      capaMarco.setCollisionByExclusion([-1]);
+      capaTerreno.setCollisionByExclusion([-1]);
+
+      // Instanciar el jugador en una zona despejada
+      player = this.physics.add.sprite(50, 50, 'idle');
       player.setBounce(0.1);
       player.setCollideWorldBounds(true);
 
-      this.physics.add.collider(player, ground);
+      // Declarar colisiones físicas recíprocas
+      this.physics.add.collider(player, capaMarco);
+      this.physics.add.collider(player, capaTerreno);
 
+      // Configurar la cámara para que siga a Shuri y no renderice fuera de los límites del nivel
+      this.cameras.main.startFollow(player, true, 0.1, 0.1);
+      this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+
+      // Capturar entradas del teclado
       cursors = this.input.keyboard.createCursorKeys();
 
-      // Animaciones corregidas utilizando generateFrameNumbers
+      // Declaración e indexación de las hojas de animación
       this.anims.create({ 
         key: 'idle', 
         frames: this.anims.generateFrameNumbers('idle'), 
         frameRate: 10, 
-        repeat: -1 // -1 indica que se repetirá en bucle infinito
+        repeat: -1
       });
       this.anims.create({ 
         key: 'walk', 
         frames: this.anims.generateFrameNumbers('walk'), 
-        frameRate: 15, // Puedes ajustar la velocidad aquí si se ve muy lento/rápido
+        frameRate: 15, 
         repeat: -1 
       });
       this.anims.create({ 
         key: 'jump', 
         frames: this.anims.generateFrameNumbers('jump'), 
         frameRate: 10, 
-        repeat: 0 // 0 indica que solo se reproduce una vez
+        repeat: 0 
       });
       this.anims.create({ 
         key: 'fall', 
@@ -81,11 +106,9 @@ export default function App() {
       });
     }
 
-
-    // CLASE 3: Juego (Game Loop)
-    // CLASE 3: Juego (Game Loop)
+    // 4. Ciclo principal del juego (Game Loop)
     function update() {
-      // 1. Físicas: Movimiento horizontal puro
+      // Movimiento horizontal continuo
       if (cursors.left.isDown) {
         player.setVelocityX(-200);
         player.flipX = true; 
@@ -96,21 +119,24 @@ export default function App() {
         player.setVelocityX(0);
       }
 
-      // 2. Físicas: Salto
-      if (cursors.up.isDown && player.body.touching.down) {
+      // Verificación combinada de contacto con suelo de Tiles u objetos físicos
+      const isGrounded = player.body.onFloor() || player.body.touching.down;
+
+      // Mecánica de Salto
+      if (cursors.up.isDown && isGrounded) {
         player.setVelocityY(-450);
       }
 
-      // 3. Animaciones: Condicionadas estrictamente por el estado físico
-      if (!player.body.touching.down) {
-        // Si está en el aire, evaluamos la velocidad vertical
+      // Control preciso de la máquina de estados de animación
+      if (!isGrounded) {
+        // En el aire: evalúa ascenso o descenso libre
         if (player.body.velocity.y < 0) {
           player.anims.play('jump', true);
         } else {
           player.anims.play('fall', true);
         }
       } else {
-        // Si está en el suelo, evaluamos si existe desplazamiento horizontal
+        // En una superficie sólida: evalúa reposo o desplazamiento lateral
         if (player.body.velocity.x !== 0) {
           player.anims.play('walk', true);
         } else {
@@ -119,8 +145,7 @@ export default function App() {
       }
     }
 
-
-    // Limpieza de React al desmontar
+    // Desmontar el canvas del juego si el componente React se destruye
     return () => {
       game.destroy(true);
     };
