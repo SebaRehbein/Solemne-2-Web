@@ -41,6 +41,7 @@ export default function App() {
       this.load.spritesheet('walk', 'assets/animaciones/Main_Characters/Shuri/Run (32x32).png', { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet('jump', 'assets/animaciones/Main_Characters/Shuri/Jump (32x32).png', { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet('fall', 'assets/animaciones/Main_Characters/Shuri/Fall (32x32).png', { frameWidth: 32, frameHeight: 32 });
+      this.load.spritesheet('double-jump', 'assets/animaciones/Main_Characters/Shuri/Double Jump (32x32).png', { frameWidth: 32, frameHeight: 32 });
 
       // Elementos del mapa de Tiled
       this.load.image('tiles-terrain', 'assets/Terrain (16x16).png');
@@ -104,6 +105,15 @@ export default function App() {
         frameRate: 10, 
         repeat: -1 
       });
+      this.anims.create({ 
+        key: 'double-jump', 
+        frames: this.anims.generateFrameNumbers('double-jump'), 
+        frameRate: 15, 
+        repeat: 0 
+      });
+
+      // Inicializar contador de saltos
+      player.jumpCount = 0;
     }
 
     // 4. Ciclo principal del juego (Game Loop)
@@ -122,15 +132,31 @@ export default function App() {
       // Verificación combinada de contacto con suelo de Tiles u objetos físicos
       const isGrounded = player.body.onFloor() || player.body.touching.down;
 
-      // Mecánica de Salto
-      if (cursors.up.isDown && isGrounded) {
-        player.setVelocityY(-450);
+      if (isGrounded) {
+        player.jumpCount = 0;
+      }
+
+      // Mecánica de Salto y Doble Salto (solo se dispara una vez por pulsación)
+      if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
+        if (isGrounded || player.jumpCount === 0) {
+          player.setVelocityY(-277); // Alcanza 48px
+          player.jumpCount = 1;
+        } else if (player.jumpCount === 1) {
+          player.setVelocityY(-226); // Alcanza 32px adicionales
+          player.jumpCount = 2;
+          player.anims.play('double-jump', true);
+        }
       }
 
       // Control preciso de la máquina de estados de animación
       if (!isGrounded) {
-        // En el aire: evalúa ascenso o descenso libre
-        if (player.body.velocity.y < 0) {
+        // En el aire: evalúa ascenso, descenso libre o doble salto
+        if (player.jumpCount === 2) {
+          // Prioriza la animación de doble salto hasta que termine o toque el suelo
+          if (!player.anims.isPlaying || player.anims.currentAnim.key !== 'double-jump') {
+            player.anims.play('double-jump', true);
+          }
+        } else if (player.body.velocity.y < 0) {
           player.anims.play('jump', true);
         } else {
           player.anims.play('fall', true);
