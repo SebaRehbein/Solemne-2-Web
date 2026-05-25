@@ -209,9 +209,9 @@ class GameScene extends Phaser.Scene {
   // UPDATE: Lógica que se ejecuta en cada frame (Movimiento y físicas)
   // ----------------------------------------------------------------------------
   update() {
-    let moverIzquierda = false;
-    let moverDerecha = false;
-    let botonSalto = false;
+    //let moverIzquierda = false;
+    //let moverDerecha = false;
+    //let botonSalto = false;
 
     // === LÓGICA DE CONTROLES POR FASE ===
     if (this.bossPhase === 1) {
