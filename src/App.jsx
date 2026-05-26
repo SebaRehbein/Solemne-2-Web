@@ -2,6 +2,47 @@ import { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 
 // ==============================================================================
+// SISTEMA DE CLASES DE PERSONAJES (OOP)
+// ==============================================================================
+// Clase Padre que contiene la física y propiedades comunes
+class PersonajeBase extends Phaser.Physics.Arcade.Sprite {
+  constructor(scene, x, y, textura) {
+    super(scene, x, y, textura);
+    scene.add.existing(this);
+    scene.physics.add.existing(this);
+
+    this.setBounce(0.1);
+    this.setCollideWorldBounds(true);
+    this.jumpCount = 0;
+    
+    // Propiedades base: iguales para todos por ahora. 
+    // Luego podrás sobreescribirlas en cada clase (ej: Tanque más lento).
+    this.velocidadX = 200;
+    this.fuerzaSalto = -277;
+    this.fuerzaDobleSalto = -226;
+  }
+}
+
+// Clases Hijas para cada personaje
+class Shuri extends PersonajeBase {
+  constructor(scene, x, y) {
+    super(scene, x, y, 'Shuri_idle');
+  }
+}
+
+class Tyson extends PersonajeBase {
+  constructor(scene, x, y) {
+    super(scene, x, y, 'Tyson_idle');
+  }
+}
+
+class Frog extends PersonajeBase {
+  constructor(scene, x, y) {
+    super(scene, x, y, 'Frog_idle');
+  }
+}
+
+// ==============================================================================
 // ESCENA 1: EL MENÚ PRINCIPAL
 // ==============================================================================
 class MenuScene extends Phaser.Scene {
@@ -11,18 +52,26 @@ class MenuScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor('#000000');
-    this.add.text(240, 60, 'SOLEMNE 2', { fontSize: '32px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.text(240, 40, 'SOLEMNE 2', { fontSize: '32px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
 
-    const btnJugar = this.add.text(240, 140, 'Jugar', { fontSize: '24px', fill: '#00ff00' }).setOrigin(0.5).setInteractive();
-    btnJugar.on('pointerdown', () => { this.scene.start('GameScene'); });
+    this.add.text(240, 90, 'Elige tu personaje:', { fontSize: '20px', fill: '#ffff00' }).setOrigin(0.5);
 
-    const btnCrear = this.add.text(240, 200, 'Crear Usuario', { fontSize: '24px', fill: '#ffffff' }).setOrigin(0.5).setInteractive();
+    const btnShuri = this.add.text(240, 130, 'Jugar con Shuri', { fontSize: '24px', fill: '#00ff00' }).setOrigin(0.5).setInteractive();
+    btnShuri.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Shuri' }); });
+
+    const btnTyson = this.add.text(240, 170, 'Jugar con Tyson', { fontSize: '24px', fill: '#00ff00' }).setOrigin(0.5).setInteractive();
+    btnTyson.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Tyson' }); });
+
+    const btnFrog = this.add.text(240, 210, 'Jugar con Frog', { fontSize: '24px', fill: '#00ff00' }).setOrigin(0.5).setInteractive();
+    btnFrog.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Frog' }); });
+
+    const btnCrear = this.add.text(240, 260, 'Crear Usuario', { fontSize: '20px', fill: '#ffffff' }).setOrigin(0.5).setInteractive();
     btnCrear.on('pointerdown', () => { alert('Sección de Crear Usuario en construcción'); });
 
-    const btnSalir = this.add.text(240, 260, 'Salir', { fontSize: '24px', fill: '#ff0000' }).setOrigin(0.5).setInteractive();
+    const btnSalir = this.add.text(240, 290, 'Salir', { fontSize: '20px', fill: '#ff0000' }).setOrigin(0.5).setInteractive();
     btnSalir.on('pointerdown', () => { alert('Saliendo de la partida...'); });
 
-    [btnJugar, btnCrear, btnSalir].forEach(btn => {
+    [btnShuri, btnTyson, btnFrog, btnCrear, btnSalir].forEach(btn => {
       btn.on('pointerover', () => btn.setScale(1.2));
       btn.on('pointerout', () => btn.setScale(1));
     });
@@ -38,14 +87,24 @@ class GameScene extends Phaser.Scene {
   }
 
   // ----------------------------------------------------------------------------
-  // PRELOAD: Carga de imágenes y mapas
+  // INIT: Recibe la información del menú
+  // ----------------------------------------------------------------------------
+  init(data) {
+    this.personajeSeleccionado = data.personaje || 'Shuri';
+  }
+
+  // ----------------------------------------------------------------------------
+  // PRELOAD: Carga de imágenes dinámicamente según la clase
   // ----------------------------------------------------------------------------
   preload() {
-    this.load.spritesheet('idle', 'assets/animaciones/Main_Characters/Shuri/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('walk', 'assets/animaciones/Main_Characters/Shuri/Run (32x32).png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('jump', 'assets/animaciones/Main_Characters/Shuri/Jump (32x32).png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('fall', 'assets/animaciones/Main_Characters/Shuri/Fall (32x32).png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('double-jump', 'assets/animaciones/Main_Characters/Shuri/Double Jump (32x32).png', { frameWidth: 32, frameHeight: 32 });
+    const char = this.personajeSeleccionado;
+    
+    // Carga exclusiva de los assets correspondientes a la carpeta de la clase
+    this.load.spritesheet(`${char}_idle`, `assets/animaciones/Main_Characters/${char}/Idle (32x32).png`, { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_walk`, `assets/animaciones/Main_Characters/${char}/Run (32x32).png`, { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_jump`, `assets/animaciones/Main_Characters/${char}/Jump (32x32).png`, { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_fall`, `assets/animaciones/Main_Characters/${char}/Fall (32x32).png`, { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_double-jump`, `assets/animaciones/Main_Characters/${char}/Double Jump (32x32).png`, { frameWidth: 32, frameHeight: 32 });
 
     this.load.image('tiles-terrain', 'assets/Terrain (16x16).png');
     this.load.tilemapTiledJSON('mapa-nivel1', 'assets/LevelTest.tmj');
@@ -63,17 +122,22 @@ class GameScene extends Phaser.Scene {
     capaMarco.setCollisionByExclusion([-1]);
     capaTerreno.setCollisionByExclusion([-1]);
 
-    this.cameras.main.setBackgroundColor('#87CEEB'); // Inicia Celeste (Fase 1)
+    this.cameras.main.setBackgroundColor('#87CEEB'); 
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
-    // === 2. JUGADOR (SHURI) ===
+    // === 2. JUGADOR (SISTEMA DE CLASES) ===
     this.playerHealth = 100;
     this.healthText = this.add.text(10, 10, 'Vida: 100', { fontSize: '20px', fill: '#ffffff', backgroundColor: '#000' }).setScrollFactor(0);
 
-    this.player = this.physics.add.sprite(50, 50, 'idle');
-    this.player.setBounce(0.1);
-    this.player.setCollideWorldBounds(true);
-    this.player.jumpCount = 0;
+    // Instanciación del objeto según la selección del usuario
+    if (this.personajeSeleccionado === 'Shuri') {
+      this.player = new Shuri(this, 50, 50);
+    } else if (this.personajeSeleccionado === 'Tyson') {
+      this.player = new Tyson(this, 50, 50);
+    } else if (this.personajeSeleccionado === 'Frog') {
+      this.player = new Frog(this, 50, 50);
+    }
+
     this.physics.add.collider(this.player, capaMarco);
     this.physics.add.collider(this.player, capaTerreno);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -84,11 +148,12 @@ class GameScene extends Phaser.Scene {
       S: Phaser.Input.Keyboard.KeyCodes.S, D: Phaser.Input.Keyboard.KeyCodes.D
     });
 
-    this.anims.create({ key: 'idle', frames: this.anims.generateFrameNumbers('idle'), frameRate: 10, repeat: -1 });
-    this.anims.create({ key: 'walk', frames: this.anims.generateFrameNumbers('walk'), frameRate: 15, repeat: -1 });
-    this.anims.create({ key: 'jump', frames: this.anims.generateFrameNumbers('jump'), frameRate: 10, repeat: 0 });
-    this.anims.create({ key: 'fall', frames: this.anims.generateFrameNumbers('fall'), frameRate: 10, repeat: -1 });
-    this.anims.create({ key: 'double-jump', frames: this.anims.generateFrameNumbers('double-jump'), frameRate: 15, repeat: 0 });
+    const char = this.personajeSeleccionado;
+    this.anims.create({ key: `${char}_idle`, frames: this.anims.generateFrameNumbers(`${char}_idle`), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: `${char}_walk`, frames: this.anims.generateFrameNumbers(`${char}_walk`), frameRate: 15, repeat: -1 });
+    this.anims.create({ key: `${char}_jump`, frames: this.anims.generateFrameNumbers(`${char}_jump`), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: `${char}_fall`, frames: this.anims.generateFrameNumbers(`${char}_fall`), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: `${char}_double-jump`, frames: this.anims.generateFrameNumbers(`${char}_double-jump`), frameRate: 15, repeat: 0 });
 
     // === 4. ARMA DEL JUGADOR ===
     const graphics = this.add.graphics();
@@ -124,12 +189,11 @@ class GameScene extends Phaser.Scene {
     this.boss.setCollideWorldBounds(true);
     this.boss.setBounce(1); 
     
-    this.bossHealth = 2500; // Vida del jefe
-    this.bossPhase = 1;     // Fase inicial
+    this.bossHealth = 2500; 
+    this.bossPhase = 1;     
     this.physics.add.collider(this.boss, capaMarco);
     this.physics.add.collider(this.boss, capaTerreno);
 
-    // IA Movimiento Jefe
     this.time.addEvent({
       delay: 2000, 
       callback: () => {
@@ -139,13 +203,12 @@ class GameScene extends Phaser.Scene {
       }, loop: true
     });
 
-    // Arma del Jefe
     this.bossBullets = this.physics.add.group({ defaultKey: 'balaTextura', maxSize: 80 });
     this.physics.add.collider(this.bossBullets, capaMarco, (b) => b.destroy());
     this.physics.add.collider(this.bossBullets, capaTerreno, (b) => b.destroy());
 
     this.bossShootTimer = this.time.addEvent({
-      delay: 150, // Velocidad inicial (Fase 1)
+      delay: 150, 
       callback: () => {
         if (this.boss && this.boss.active) {
           const bullet = this.bossBullets.get(this.boss.x, this.boss.y);
@@ -159,25 +222,24 @@ class GameScene extends Phaser.Scene {
       }, loop: true
     });
 
-    // Lógica de cambio de Fases (1 y 2)
     const cambiarFase = () => {
-      if (!this.boss || !this.boss.active) return; // Si el jefe murió, no hacemos nada
+      if (!this.boss || !this.boss.active) return; 
   
       if (this.bossPhase === 1) {
         this.bossPhase = 2;
-        this.cameras.main.setBackgroundColor('#ffb6c1'); // Rosa
-        this.bossShootTimer.delay = 600; // Disparo lento
-        this.time.delayedCall(10000, cambiarFase); // En 10 seg vuelve a Fase 1
+        this.cameras.main.setBackgroundColor('#ffb6c1'); 
+        this.bossShootTimer.delay = 600; 
+        this.time.delayedCall(10000, cambiarFase); 
       } else {
         this.bossPhase = 1;
-        this.cameras.main.setBackgroundColor('#87CEEB'); // Celeste
-        this.bossShootTimer.delay = 150; // Disparo rápido
-        this.time.delayedCall(20000, cambiarFase); // En 20 seg vuelve a Fase 2
+        this.cameras.main.setBackgroundColor('#87CEEB'); 
+        this.bossShootTimer.delay = 150; 
+        this.time.delayedCall(20000, cambiarFase); 
       }
     };
-    this.time.delayedCall(20000, cambiarFase); // Arranca el ciclo
+    this.time.delayedCall(20000, cambiarFase); 
 
-    // === 6. SISTEMA DE DAÑO (Colisiones) ===
+    // === 6. SISTEMA DE DAÑO ===
     this.physics.add.overlap(this.player, this.bossBullets, (player, bullet) => {
       bullet.destroy();
       this.playerHealth -= 10;
@@ -206,7 +268,7 @@ class GameScene extends Phaser.Scene {
   }
 
   // ----------------------------------------------------------------------------
-  // UPDATE: Lógica que se ejecuta en cada frame (Movimiento y físicas)
+  // UPDATE: Lógica que se ejecuta en cada frame
   // ----------------------------------------------------------------------------
   update() {
     let moverIzquierda;
@@ -219,17 +281,17 @@ class GameScene extends Phaser.Scene {
       moverDerecha = this.teclas.D.isDown;
       botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.W);
     } else {
-      moverIzquierda = this.teclas.D.isDown; // Invertido
-      moverDerecha = this.teclas.A.isDown;   // Invertido
-      botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.S); // Invertido
+      moverIzquierda = this.teclas.D.isDown; 
+      moverDerecha = this.teclas.A.isDown;   
+      botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.S); 
     }
 
-    // Aplicar movimiento horizontal
+    // Extracción de las capacidades de movimiento de la clase instanciada
     if (moverIzquierda) {
-      this.player.setVelocityX(-200);
+      this.player.setVelocityX(-this.player.velocidadX);
       this.player.flipX = true; 
     } else if (moverDerecha) {
-      this.player.setVelocityX(200);
+      this.player.setVelocityX(this.player.velocidadX);
       this.player.flipX = false;
     } else {
       this.player.setVelocityX(0);
@@ -238,34 +300,36 @@ class GameScene extends Phaser.Scene {
     const isGrounded = this.player.body.onFloor() || this.player.body.touching.down;
     if (isGrounded) this.player.jumpCount = 0;
 
-    // Aplicar salto
+    const char = this.personajeSeleccionado;
+
+    // Ejecución de salto basándose en las fuerzas de la clase
     if (botonSalto) {
       if (isGrounded || this.player.jumpCount === 0) {
-        this.player.setVelocityY(-277); 
+        this.player.setVelocityY(this.player.fuerzaSalto); 
         this.player.jumpCount = 1;
       } else if (this.player.jumpCount === 1) {
-        this.player.setVelocityY(-226); 
+        this.player.setVelocityY(this.player.fuerzaDobleSalto); 
         this.player.jumpCount = 2;
-        this.player.anims.play('double-jump', true);
+        this.player.anims.play(`${char}_double-jump`, true);
       }
     }
 
-    // Animaciones
+    // Animaciones referenciadas dinámicamente
     if (!isGrounded) {
       if (this.player.jumpCount === 2) {
-        if (!this.player.anims.isPlaying || this.player.anims.currentAnim.key !== 'double-jump') {
-          this.player.anims.play('double-jump', true);
+        if (!this.player.anims.isPlaying || this.player.anims.currentAnim.key !== `${char}_double-jump`) {
+          this.player.anims.play(`${char}_double-jump`, true);
         }
       } else if (this.player.body.velocity.y < 0) {
-        this.player.anims.play('jump', true);
+        this.player.anims.play(`${char}_jump`, true);
       } else {
-        this.player.anims.play('fall', true);
+        this.player.anims.play(`${char}_fall`, true);
       }
     } else {
       if (this.player.body.velocity.x !== 0) {
-        this.player.anims.play('walk', true);
+        this.player.anims.play(`${char}_walk`, true);
       } else {
-        this.player.anims.play('idle', true);
+        this.player.anims.play(`${char}_idle`, true);
       }
     }
   }
