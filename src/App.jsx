@@ -11,15 +11,16 @@ class PersonajeBase extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setBounce(0.1);
+    // Se cambia a 0 para que no rebote al caer y no consuma saltos por error
+    this.setBounce(0);
     this.setCollideWorldBounds(true);
     this.jumpCount = 0;
     
     // Propiedades base: iguales para todos por ahora. 
     // Luego podrás sobreescribirlas en cada clase (ej: Tanque más lento).
     this.velocidadX = 200;
-    this.fuerzaSalto = -277;
-    this.fuerzaDobleSalto = -226;
+    this.fuerzaSalto = -300;
+    this.fuerzaDobleSalto = -250;
   }
 }
 
@@ -298,34 +299,42 @@ class GameScene extends Phaser.Scene {
     }
 
     const isGrounded = this.player.body.onFloor() || this.player.body.touching.down;
-    if (isGrounded) this.player.jumpCount = 0;
+    
+    // Evitar el salto extra. Solo reseteamos si toca el suelo Y no está despegando
+    if (isGrounded && this.player.body.velocity.y >= 0) {
+      this.player.jumpCount = 0;
+    }
 
     const char = this.personajeSeleccionado;
 
-    // Ejecución de salto basándose en las fuerzas de la clase
+    // Lógica estricta de 2 saltos
     if (botonSalto) {
-      if (isGrounded || this.player.jumpCount === 0) {
+      if (this.player.jumpCount === 0) {
+        // Primer salto (eleva 48px)
         this.player.setVelocityY(this.player.fuerzaSalto); 
         this.player.jumpCount = 1;
       } else if (this.player.jumpCount === 1) {
+        // Segundo salto (eleva 32px)
         this.player.setVelocityY(this.player.fuerzaDobleSalto); 
         this.player.jumpCount = 2;
-        this.player.anims.play(`${char}_double-jump`, true);
       }
     }
 
-    // Animaciones referenciadas dinámicamente
-    if (!isGrounded) {
-      if (this.player.jumpCount === 2) {
-        if (!this.player.anims.isPlaying || this.player.anims.currentAnim.key !== `${char}_double-jump`) {
+    // Forzar animaciones instantáneas basadas en la velocidad
+    if (!isGrounded || this.player.body.velocity.y < 0) {
+      if (this.player.body.velocity.y < 0) {
+        // Si la velocidad es negativa (va hacia arriba)
+        if (this.player.jumpCount === 2) {
           this.player.anims.play(`${char}_double-jump`, true);
+        } else {
+          this.player.anims.play(`${char}_jump`, true);
         }
-      } else if (this.player.body.velocity.y < 0) {
-        this.player.anims.play(`${char}_jump`, true);
       } else {
+        // Si la velocidad es positiva (va cayendo)
         this.player.anims.play(`${char}_fall`, true);
       }
     } else {
+      // En el suelo
       if (this.player.body.velocity.x !== 0) {
         this.player.anims.play(`${char}_walk`, true);
       } else {
