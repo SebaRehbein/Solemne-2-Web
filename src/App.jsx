@@ -2,29 +2,47 @@ import { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 
 // ==============================================================================
-// ESCENA 1: EL MENÚ PRINCIPAL
+// ESCENA 1: EL MENÚ PRINCIPAL (Con imagen)
 // ==============================================================================
 class MenuScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MenuScene' });
   }
 
+  preload() {
+    // 1. Cargamos tu imagen (Asegúrate de que el nombre y extensión coincidan)
+    this.load.image('fondoMenu', 'assets/MENU_3.jpg');
+  }
+
   create() {
-    this.cameras.main.setBackgroundColor('#000000');
-    this.add.text(240, 60, 'SOLEMNE 2', { fontSize: '32px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    // 2. Ponemos la imagen en el centro exacto de la pantalla (240x, 160y)
+    const bg = this.add.image(240, 160, 'fondoMenu');
+    
+    // Obligamos a la imagen a encajar perfectamente en los 480x320 de tu juego
+    bg.setDisplaySize(480, 320);
 
-    const btnJugar = this.add.text(240, 140, 'Jugar', { fontSize: '24px', fill: '#00ff00' }).setOrigin(0.5).setInteractive();
-    btnJugar.on('pointerdown', () => { this.scene.start('GameScene'); });
+    // 3. CREAMOS ZONAS INVISIBLES SOBRE LOS HUESOS
+    // El formato de zone es: (X, Y, Ancho, Alto)
 
-    const btnCrear = this.add.text(240, 200, 'Crear Usuario', { fontSize: '24px', fill: '#ffffff' }).setOrigin(0.5).setInteractive();
-    btnCrear.on('pointerdown', () => { alert('Sección de Crear Usuario en construcción'); });
+    // ZONA INVISIBLE PARA "PLAY"
+    // (Ajusta la posición Y si el clic queda muy arriba o muy abajo del hueso)
+    const zonaPlay = this.add.zone(240, 140, 200, 45).setInteractive({ useHandCursor: true });
+    
+    zonaPlay.on('pointerdown', () => { 
+      this.scene.start('GameScene'); 
+    });
 
-    const btnSalir = this.add.text(240, 260, 'Salir', { fontSize: '24px', fill: '#ff0000' }).setOrigin(0.5).setInteractive();
-    btnSalir.on('pointerdown', () => { alert('Saliendo de la partida...'); });
+    // ZONA INVISIBLE PARA "EXIT"
+    const zonaExit = this.add.zone(240, 255, 200, 45).setInteractive({ useHandCursor: true });
+    
+    zonaExit.on('pointerdown', () => { 
+      alert('Saliendo de la partida...'); 
+    });
 
-    [btnJugar, btnCrear, btnSalir].forEach(btn => {
-      btn.on('pointerover', () => btn.setScale(1.2));
-      btn.on('pointerout', () => btn.setScale(1));
+    // (Opcional) Zona para OPTIONS si la llegas a necesitar después
+    const zonaOptions = this.add.zone(240, 198, 200, 45).setInteractive({ useHandCursor: true });
+    zonaOptions.on('pointerdown', () => { 
+      console.log('Opciones en construcción...'); 
     });
   }
 }
