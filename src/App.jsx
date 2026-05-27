@@ -33,7 +33,7 @@ class Frog extends PersonajeBase {
 }
 
 // ==============================================================================
-// ESCENA 1: EL MENÚ PRINCIPAL GRÁFICO
+// ESCENA 1: EL MENÚ PRINCIPAL GRÁFICO (CON NIVEL TILED COMO FONDO)
 // ==============================================================================
 class MenuScene extends Phaser.Scene {
   constructor() {
@@ -41,24 +41,50 @@ class MenuScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('fondoMenu', 'assets/MENU_3.jpg');
+    // Cargamos el tileset de terreno y el archivo JSON de tu mapa de menú
+    this.load.image('tiles-terrain', 'assets/Terrain (16x16).png');
+    this.load.tilemapTiledJSON('mapa-menu', 'assets/menu.tmj'); 
   }
 
   create() {
-    const bg = this.add.image(240, 160, 'fondoMenu');
-    bg.setDisplaySize(480, 320);
+    // Color de fondo por si el mapa no cubre totalmente el canvas
+    this.cameras.main.setBackgroundColor('#87CEEB');
 
-    // Zona PLAY -> Nos lleva a elegir el personaje
-    const zonaPlay = this.add.zone(240, 140, 200, 45).setInteractive({ useHandCursor: true });
-    zonaPlay.on('pointerdown', () => { 
+    // Inicializamos el mapa de Tiled
+    const map = this.make.tilemap({ key: 'mapa-menu' });
+    const tileset = map.addTilesetImage('terrain', 'tiles-terrain');
+
+    // Dibujamos las capas utilizando los nombres exactos de tu archivo .tmj
+    // Al omitir las físicas y colisiones, funciona únicamente como fondo visual
+    map.createLayer('Capa de patrones 1', tileset, 0, 0);
+    map.createLayer('Capa de patrones 2', tileset, 0, 0);
+    map.createLayer('Capa de patrones 3', tileset, 0, 0);
+
+    this.add.text(240, 90, "Berry Bad Luck", {
+      fontSize: '48px',
+      fill: '#ffcc00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 6
+    }).setOrigin(0.5);
+
+    // Añadimos textos interactivos estilizados para que resalten sobre el mapa
+    const btnPlay = this.add.text(240, 180, 'PLAY', { 
+      fontSize: '40px',
+      fill: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4 
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    // Lógica de transición de escenas y eventos
+    btnPlay.on('pointerdown', () => { 
       this.scene.start('MenuSeleccion'); 
     });
 
-    // Zona EXIT -> Cierra/Muestra alerta
-    const zonaExit = this.add.zone(240, 255, 200, 45).setInteractive({ useHandCursor: true });
-    zonaExit.on('pointerdown', () => { 
-      alert('Saliendo de la partida...'); 
-    });
+    // Pequeño efecto visual de escala al pasar el cursor sobre los botones
+    btnPlay.on('pointerover', () => btnPlay.setScale(1.2));
+    btnPlay.on('pointerout', () => btnPlay.setScale(1));
   }
 }
 
@@ -84,7 +110,6 @@ class MenuSeleccion extends Phaser.Scene {
     const btnFrog = this.add.text(240, 220, '3. Jugar con Frog', { fontSize: '22px', fill: '#00ff00' }).setOrigin(0.5).setInteractive();
     btnFrog.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Frog' }); });
 
-    // 4ta Opción: Salir (Volver al menú principal gráfico)
     const btnSalir = this.add.text(240, 270, '4. Volver al Inicio', { fontSize: '20px', fill: '#ff0000' }).setOrigin(0.5).setInteractive();
     btnSalir.on('pointerdown', () => { this.scene.start('MenuScene'); });
 
@@ -248,7 +273,7 @@ class GameScene extends Phaser.Scene {
 
       if (this.playerHealth <= 0) {
         alert("¡Te mató el jefe!");
-        this.scene.start('MenuSeleccion'); // Si mueres, vuelves a la selección de personaje
+        this.scene.start('MenuSeleccion'); 
       }
     });
 
@@ -348,7 +373,6 @@ export default function App() {
         default: 'arcade',
         arcade: { gravity: { y: 800 }, debug: false }
       },
-      // AQUÍ SE DEFINE EL ORDEN DE CARGA:
       scene: [MenuScene, MenuSeleccion, GameScene]
     };
 
