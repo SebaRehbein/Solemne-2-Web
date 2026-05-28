@@ -128,17 +128,17 @@ class MenuSeleccion extends Phaser.Scene {
 
     // --- Personaje 1: Shuri ---
     this.add.sprite(posX.shuri, posYAnim, 'Shuri_idle').play('Shuri_idle').setScale(2);
-    const btnShuri = this.add.text(posX.shuri, posYText, 'Shuri', { fontSize: '22px', fill: '#00ff00' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const btnShuri = this.add.text(posX.shuri, posYText, 'Shuri', { fontSize: '22px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnShuri.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Shuri' }); });
 
     // --- Personaje 2: Tyson ---
     this.add.sprite(posX.tyson, posYAnim, 'Tyson_idle').play('Tyson_idle').setScale(2);
-    const btnTyson = this.add.text(posX.tyson, posYText, 'Tyson', { fontSize: '22px', fill: '#00ff00' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const btnTyson = this.add.text(posX.tyson, posYText, 'Tyson', { fontSize: '22px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnTyson.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Tyson' }); });
 
     // --- Personaje 3: Frog ---
     this.add.sprite(posX.frog, posYAnim, 'Frog_idle').play('Frog_idle').setScale(2);
-    const btnFrog = this.add.text(posX.frog, posYText, 'Frog', { fontSize: '22px', fill: '#00ff00' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const btnFrog = this.add.text(posX.frog, posYText, 'Frog', { fontSize: '22px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnFrog.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Frog' }); });
 
     // Botón de retorno
