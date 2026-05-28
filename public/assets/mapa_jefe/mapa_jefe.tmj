@@ -59,7 +59,7 @@
          "name":"tarima_5",
          "opacity":1,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":30,
          "x":0,
          "y":0
@@ -90,7 +90,7 @@
          "name":"tarima_4",
          "opacity":1,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":30,
          "x":0,
          "y":0
@@ -121,7 +121,7 @@
          "name":"tarima_3",
          "opacity":1,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":30,
          "x":0,
          "y":0
@@ -152,7 +152,7 @@
          "name":"tarima_2",
          "opacity":1,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":30,
          "x":0,
          "y":0
@@ -183,7 +183,7 @@
          "name":"tarima_1",
          "opacity":1,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":30,
          "x":0,
          "y":0
@@ -214,7 +214,7 @@
          "name":"terreno",
          "opacity":1,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":30,
          "x":0,
          "y":0
@@ -245,7 +245,7 @@
          "name":"piso_falso_2",
          "opacity":1,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":30,
          "x":0,
          "y":0
@@ -276,7 +276,7 @@
          "name":"piso_falso_1",
          "opacity":1,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":30,
          "x":0,
          "y":0
@@ -289,12 +289,43 @@
  "tileheight":16,
  "tilesets":[
         {
+         "columns":22,
          "firstgid":1,
-         "source":"..\/..\/mapa prueba.tsx"
+         "image":"..\/Terrain (16x16).png",
+         "imageheight":176,
+         "imagewidth":352,
+         "margin":0,
+         "name":"Terrain (16x16)",
+         "spacing":0,
+         "tilecount":242,
+         "tileheight":16,
+         "tilewidth":16
         }, 
         {
+         "columns":1,
          "firstgid":243,
-         "source":"..\/..\/MAGAMA.tsx"
+         "image":"..\/..\/..\/..\/..\/MAGAMA.png",
+         "imageheight":16,
+         "imagewidth":16,
+         "margin":0,
+         "name":"MAGAMA",
+         "spacing":0,
+         "tilecount":1,
+         "tileheight":16,
+         "tilewidth":16
+        }, 
+        {
+         "columns":22,
+         "firstgid":244,
+         "image":"..\/Terrain (16x16).png",
+         "imageheight":176,
+         "imagewidth":352,
+         "margin":0,
+         "name":"Terrain (16x16)",
+         "spacing":0,
+         "tilecount":242,
+         "tileheight":16,
+         "tilewidth":16
         }],
  "tilewidth":16,
  "type":"map",
