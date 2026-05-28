@@ -521,7 +521,7 @@ class PauseScene extends Phaser.Scene {
   create() {
     // 1. Oscurecer la pantalla (semi-transparente).
     // Los valores 240, 160 son el centro de tu pantalla (480x320) y 0.7 es la opacidad.
-    const overlay = this.add.rectangle(240, 160, 480, 320, 0x000000, 0.7);
+    this.add.rectangle(240, 160, 480, 320, 0x000000, 0.7);
 
     // 2. Texto "PAUSA" en la parte superior
     this.add.text(240, 80, 'PAUSA', {
