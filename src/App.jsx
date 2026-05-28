@@ -96,23 +96,56 @@ class MenuSeleccion extends Phaser.Scene {
     super({ key: 'MenuSeleccion' });
   }
 
-  create() {
-    this.cameras.main.setBackgroundColor('#000000');
-    this.add.text(240, 40, 'SOLEMNE 2', { fontSize: '32px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
-    this.add.text(240, 90, 'Elige tu personaje:', { fontSize: '20px', fill: '#ffff00' }).setOrigin(0.5);
+  preload() {
+    // Precarga de los spritesheets de animación 'idle' para el menú
+    this.load.spritesheet('Shuri_idle', 'assets/animaciones/Main_Characters/Shuri/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('Tyson_idle', 'assets/animaciones/Main_Characters/Tyson/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('Frog_idle', 'assets/animaciones/Main_Characters/Frog/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
+  }
 
-    const btnShuri = this.add.text(240, 140, '1. Jugar con Shuri', { fontSize: '22px', fill: '#00ff00' }).setOrigin(0.5).setInteractive();
+  create() {
+    this.cameras.main.setBackgroundColor('#87CEEB');
+    
+    // Título superior centrado
+    this.add.text(240, 50, 'Elige tu personaje:', { fontSize: '20px', fill: '#ffff00' }).setOrigin(0.5);
+
+    // Verificación y creación de animaciones globales
+    ['Shuri', 'Tyson', 'Frog'].forEach(char => {
+      if (!this.anims.exists(`${char}_idle`)) {
+        this.anims.create({
+          key: `${char}_idle`,
+          frames: this.anims.generateFrameNumbers(`${char}_idle`),
+          frameRate: 10,
+          repeat: -1
+        });
+      }
+    });
+
+    // Definición de coordenadas para alineación horizontal
+    const posX = { shuri: 100, tyson: 240, frog: 380 };
+    const posYAnim = 140;
+    const posYText = 190;
+
+    // --- Personaje 1: Shuri ---
+    this.add.sprite(posX.shuri, posYAnim, 'Shuri_idle').play('Shuri_idle').setScale(2);
+    const btnShuri = this.add.text(posX.shuri, posYText, 'Shuri', { fontSize: '22px', fill: '#00ff00' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnShuri.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Shuri' }); });
 
-    const btnTyson = this.add.text(240, 180, '2. Jugar con Tyson', { fontSize: '22px', fill: '#00ff00' }).setOrigin(0.5).setInteractive();
+    // --- Personaje 2: Tyson ---
+    this.add.sprite(posX.tyson, posYAnim, 'Tyson_idle').play('Tyson_idle').setScale(2);
+    const btnTyson = this.add.text(posX.tyson, posYText, 'Tyson', { fontSize: '22px', fill: '#00ff00' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnTyson.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Tyson' }); });
 
-    const btnFrog = this.add.text(240, 220, '3. Jugar con Frog', { fontSize: '22px', fill: '#00ff00' }).setOrigin(0.5).setInteractive();
+    // --- Personaje 3: Frog ---
+    this.add.sprite(posX.frog, posYAnim, 'Frog_idle').play('Frog_idle').setScale(2);
+    const btnFrog = this.add.text(posX.frog, posYText, 'Frog', { fontSize: '22px', fill: '#00ff00' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnFrog.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Frog' }); });
 
-    const btnSalir = this.add.text(240, 270, '4. Volver al Inicio', { fontSize: '20px', fill: '#ff0000' }).setOrigin(0.5).setInteractive();
+    // Botón de retorno
+    const btnSalir = this.add.text(240, 260, 'Volver al Inicio', { fontSize: '20px', fill: '#ff0000' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnSalir.on('pointerdown', () => { this.scene.start('MenuScene'); });
 
+    // Efecto visual interactivo
     [btnShuri, btnTyson, btnFrog, btnSalir].forEach(btn => {
       btn.on('pointerover', () => btn.setScale(1.2));
       btn.on('pointerout', () => btn.setScale(1));
