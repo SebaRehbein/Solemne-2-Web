@@ -35,6 +35,9 @@ class Frog extends PersonajeBase {
 // ==============================================================================
 // ESCENA 1: EL MENÚ PRINCIPAL GRÁFICO (CON NIVEL TILED COMO FONDO)
 // ==============================================================================
+// ==============================================================================
+// ESCENA 1: EL MENÚ PRINCIPAL GRÁFICO (CON NIVEL TILED COMO FONDO)
+// ==============================================================================
 class MenuScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MenuScene' });
@@ -55,12 +58,12 @@ class MenuScene extends Phaser.Scene {
     const tileset = map.addTilesetImage('terrain', 'tiles-terrain');
 
     // Dibujamos las capas utilizando los nombres exactos de tu archivo .tmj
-    // Al omitir las físicas y colisiones, funciona únicamente como fondo visual
     map.createLayer('Capa de patrones 1', tileset, 0, 0);
     map.createLayer('Capa de patrones 2', tileset, 0, 0);
     map.createLayer('Capa de patrones 3', tileset, 0, 0);
 
-    this.add.text(240, 90, "Berry Bad Luck", {
+    // Guardamos el título en una variable para poder controlar su visibilidad
+    const titleText = this.add.text(240, 70, "Berry Bad Luck", {
       fontSize: '48px',
       fill: '#ffcc00',
       fontStyle: 'bold',
@@ -68,8 +71,8 @@ class MenuScene extends Phaser.Scene {
       strokeThickness: 6
     }).setOrigin(0.5);
 
-    // Añadimos textos interactivos estilizados para que resalten sobre el mapa
-    const btnPlay = this.add.text(240, 180, 'PLAY', { 
+    // --- BOTÓN PLAY ---
+    const btnPlay = this.add.text(240, 150, 'PLAY', { 
       fontSize: '40px',
       fill: '#ffffff',
       fontStyle: 'bold',
@@ -77,14 +80,87 @@ class MenuScene extends Phaser.Scene {
       strokeThickness: 4 
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    // Lógica de transición de escenas y eventos
     btnPlay.on('pointerdown', () => { 
       this.scene.start('MenuSeleccion'); 
     });
 
-    // Pequeño efecto visual de escala al pasar el cursor sobre los botones
     btnPlay.on('pointerover', () => btnPlay.setScale(1.2));
     btnPlay.on('pointerout', () => btnPlay.setScale(1));
+
+    // --- BOTÓN OPTIONS ---
+    const btnOptions = this.add.text(240, 220, 'OPTIONS', { 
+      fontSize: '32px',
+      fill: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4 
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    btnOptions.on('pointerover', () => btnOptions.setScale(1.2));
+    btnOptions.on('pointerout', () => btnOptions.setScale(1));
+
+    // ========================================================================
+    // OVERLAY DE OPCIONES (Contenedor oculto por defecto)
+    // ========================================================================
+    
+    // Fondo oscuro semi-transparente
+    const overlayBg = this.add.rectangle(240, 160, 480, 320, 0x000000, 0.7);
+    overlayBg.setInteractive(); 
+
+    // Botón CONTROLS
+    const btnControls = this.add.text(240, 120, 'CONTROLS', {
+      fontSize: '32px',
+      fill: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    btnControls.on('pointerdown', () => {
+      console.log("Botón Controls presionado");
+    });
+
+    // Botón BACK
+    const btnBack = this.add.text(240, 200, 'BACK', {
+      fontSize: '32px',
+      fill: '#ff0000', 
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    // Efectos visuales interactivos para el overlay
+    [btnControls, btnBack].forEach(btn => {
+      btn.on('pointerover', () => btn.setScale(1.2));
+      btn.on('pointerout', () => btn.setScale(1));
+    });
+
+    // Agrupamos el overlay en su contenedor
+    const optionsContainer = this.add.container(0, 0, [overlayBg, btnControls, btnBack]);
+    optionsContainer.setDepth(10); 
+    optionsContainer.setVisible(false); 
+
+    // ========================================================================
+    // LÓGICA DE INTERCAMBIO DE VISIBILIDAD
+    // ========================================================================
+    
+    // Al presionar OPTIONS: se oculta el menú principal y se muestra el overlay
+    btnOptions.on('pointerdown', () => {
+      titleText.setVisible(false);
+      btnPlay.setVisible(false);
+      btnOptions.setVisible(false);
+      
+      optionsContainer.setVisible(true);
+    });
+
+    // Al presionar BACK: se oculta el overlay y reaparece el menú principal
+    btnBack.on('pointerdown', () => {
+      optionsContainer.setVisible(false);
+      
+      titleText.setVisible(true);
+      btnPlay.setVisible(true);
+      btnOptions.setVisible(true);
+    });
   }
 }
 
