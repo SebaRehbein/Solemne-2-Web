@@ -33,10 +33,7 @@ class Frog extends PersonajeBase {
 }
 
 // ==============================================================================
-// ESCENA 1: EL MENÚ PRINCIPAL GRÁFICO (CON NIVEL TILED COMO FONDO)
-// ==============================================================================
-// ==============================================================================
-// ESCENA 1: EL MENÚ PRINCIPAL GRÁFICO (CON NIVEL TILED COMO FONDO)
+// ESCENA 1: EL MENÚ PRINCIPAL GRÁFICO (CON REGISTRO Y LOCALSTORAGE)
 // ==============================================================================
 class MenuScene extends Phaser.Scene {
   constructor() {
@@ -44,25 +41,31 @@ class MenuScene extends Phaser.Scene {
   }
 
   preload() {
-    // Cargamos el tileset de terreno y el archivo JSON de tu mapa de menú
     this.load.image('tiles-terrain', 'assets/Terrain (16x16).png');
     this.load.tilemapTiledJSON('mapa-menu', 'assets/menu.tmj'); 
   }
 
   create() {
-    // Color de fondo por si el mapa no cubre totalmente el canvas
     this.cameras.main.setBackgroundColor('#87CEEB');
 
-    // Inicializamos el mapa de Tiled
     const map = this.make.tilemap({ key: 'mapa-menu' });
     const tileset = map.addTilesetImage('terrain', 'tiles-terrain');
 
-    // Dibujamos las capas utilizando los nombres exactos de tu archivo .tmj
     map.createLayer('Capa de patrones 1', tileset, 0, 0);
     map.createLayer('Capa de patrones 2', tileset, 0, 0);
     map.createLayer('Capa de patrones 3', tileset, 0, 0);
 
-    // Guardamos el título en una variable para poder controlar su visibilidad
+    // --- CARGAR CONTROLES DESDE LOCALSTORAGE O POR DEFECTO ---
+    const controlesGuardados = localStorage.getItem('controlesJuego');
+    if (controlesGuardados) {
+      this.registry.set('controles', JSON.parse(controlesGuardados));
+    } else if (!this.registry.has('controles')) {
+      const controlesPorDefecto = { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
+      this.registry.set('controles', controlesPorDefecto);
+      localStorage.setItem('controlesJuego', JSON.stringify(controlesPorDefecto));
+    }
+
+    // Elementos del menú principal
     const titleText = this.add.text(240, 70, "Berry Bad Luck", {
       fontSize: '48px',
       fill: '#ffcc00',
@@ -71,8 +74,7 @@ class MenuScene extends Phaser.Scene {
       strokeThickness: 6
     }).setOrigin(0.5);
 
-    // --- BOTÓN PLAY ---
-    const btnPlay = this.add.text(240, 150, 'PLAY', { 
+    const btnPlay = this.add.text(240, 150, 'JUGAR', { 
       fontSize: '40px',
       fill: '#ffffff',
       fontStyle: 'bold',
@@ -84,11 +86,7 @@ class MenuScene extends Phaser.Scene {
       this.scene.start('MenuSeleccion'); 
     });
 
-    btnPlay.on('pointerover', () => btnPlay.setScale(1.2));
-    btnPlay.on('pointerout', () => btnPlay.setScale(1));
-
-    // --- BOTÓN OPTIONS ---
-    const btnOptions = this.add.text(240, 220, 'OPTIONS', { 
+    const btnOptions = this.add.text(240, 220, 'OPCIONES', { 
       fontSize: '32px',
       fill: '#ffffff',
       fontStyle: 'bold',
@@ -96,67 +94,115 @@ class MenuScene extends Phaser.Scene {
       strokeThickness: 4 
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    btnOptions.on('pointerover', () => btnOptions.setScale(1.2));
-    btnOptions.on('pointerout', () => btnOptions.setScale(1));
-
-    // ========================================================================
-    // OVERLAY DE OPCIONES (Contenedor oculto por defecto)
-    // ========================================================================
-    
-    // Fondo oscuro semi-transparente
-    const overlayBg = this.add.rectangle(240, 160, 480, 320, 0x000000, 0.7);
-    overlayBg.setInteractive(); 
-
-    // Botón CONTROLS
-    const btnControls = this.add.text(240, 120, 'CONTROLS', {
-      fontSize: '32px',
-      fill: '#ffffff',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 4
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-    btnControls.on('pointerdown', () => {
-      console.log("Botón Controls presionado");
+    [btnPlay, btnOptions].forEach(btn => {
+      btn.on('pointerover', () => btn.setScale(1.2));
+      btn.on('pointerout', () => btn.setScale(1));
     });
 
-    // Botón BACK
-    const btnBack = this.add.text(240, 200, 'BACK', {
-      fontSize: '32px',
+    // ========================================================================
+    // OVERLAY DE OPCIONES (CONFIGURACIÓN DINÁMICA)
+    // ========================================================================
+    const overlayBg = this.add.rectangle(240, 160, 480, 320, 0x000000, 0.85);
+    overlayBg.setInteractive(); 
+
+    const subTitle = this.add.text(240, 35, 'CONFIGURAR CONTROLES', {
+      fontSize: '22px',
+      fill: '#ffff00',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    const infoText = this.add.text(240, 65, 'Haz clic en una acción para cambiar su tecla', {
+      fontSize: '12px',
+      fill: '#aaaaaa'
+    }).setOrigin(0.5);
+
+    const ctrl = this.registry.get('controles');
+
+    const btnArriba = this.add.text(240, 105, `Salto / Arriba: ${ctrl.ARRIBA}`, { fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const btnIzquierda = this.add.text(240, 145, `Izquierda: ${ctrl.IZQUIERDA}`, { fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const btnAbajo = this.add.text(240, 185, `Abajo: ${ctrl.ABAJO}`, { fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const btnDerecha = this.add.text(240, 225, `Derecha: ${ctrl.DERECHA}`, { fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    const btnBack = this.add.text(240, 280, 'VOLVER', {
+      fontSize: '24px',
       fill: '#ff0000', 
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 4
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    // Efectos visuales interactivos para el overlay
-    [btnControls, btnBack].forEach(btn => {
-      btn.on('pointerover', () => btn.setScale(1.2));
+    const optionsContainer = this.add.container(0, 0, [
+      overlayBg, subTitle, infoText, btnArriba, btnIzquierda, btnAbajo, btnDerecha, btnBack
+    ]);
+    optionsContainer.setDepth(10).setVisible(false); 
+
+    [btnArriba, btnIzquierda, btnAbajo, btnDerecha, btnBack].forEach(btn => {
+      btn.on('pointerover', () => btn.setScale(1.1));
       btn.on('pointerout', () => btn.setScale(1));
     });
 
-    // Agrupamos el overlay en su contenedor
-    const optionsContainer = this.add.container(0, 0, [overlayBg, btnControls, btnBack]);
-    optionsContainer.setDepth(10); 
-    optionsContainer.setVisible(false); 
+    let esperandoTecla = false;
 
-    // ========================================================================
-    // LÓGICA DE INTERCAMBIO DE VISIBILIDAD
-    // ========================================================================
-    
-    // Al presionar OPTIONS: se oculta el menú principal y se muestra el overlay
+    // Función de remapeo interactivo
+    const iniciarRebind = (btnComponent, campoControl, textoBase) => {
+      if (esperandoTecla) return;
+      esperandoTecla = true;
+
+      btnComponent.setText(`${textoBase}: [ PRESIONA UNA TECLA... ]`);
+      btnComponent.setFill('#ffcc00');
+
+      this.input.keyboard.once('keydown', (event) => {
+        let keyName = event.key.toUpperCase();
+
+        if (keyName === 'ARROWUP') keyName = 'UP';
+        if (keyName === 'ARROWDOWN') keyName = 'DOWN';
+        if (keyName === 'ARROWLEFT') keyName = 'LEFT';
+        if (keyName === 'ARROWRIGHT') keyName = 'RIGHT';
+        if (keyName === ' ') keyName = 'SPACE';
+
+        if (Phaser.Input.Keyboard.KeyCodes[keyName] !== undefined) {
+          const controlesActuales = this.registry.get('controles');
+          controlesActuales[campoControl] = keyName;
+          
+          // Guardar en RAM de Phaser y persistir en el Navegador
+          this.registry.set('controles', controlesActuales);
+          localStorage.setItem('controlesJuego', JSON.stringify(controlesActuales));
+          
+          btnComponent.setText(`${textoBase}: ${keyName}`);
+        } else {
+          const controlesActuales = this.registry.get('controles');
+          btnComponent.setText(`${textoBase}: ${controlesActuales[campoControl]}`);
+        }
+
+        btnComponent.setFill('#ffffff');
+        esperandoTecla = false;
+      });
+    };
+
+    btnArriba.on('pointerdown', () => iniciarRebind(btnArriba, 'ARRIBA', 'Salto / Arriba'));
+    btnIzquierda.on('pointerdown', () => iniciarRebind(btnIzquierda, 'IZQUIERDA', 'Izquierda'));
+    btnAbajo.on('pointerdown', () => iniciarRebind(btnAbajo, 'ABAJO', 'Abajo (Fase 2)'));
+    btnDerecha.on('pointerdown', () => iniciarRebind(btnDerecha, 'DERECHA', 'Derecha'));
+
+    // Flujo de ocultación recíproco
     btnOptions.on('pointerdown', () => {
+      if (esperandoTecla) return;
       titleText.setVisible(false);
       btnPlay.setVisible(false);
       btnOptions.setVisible(false);
-      
+
+      const c = this.registry.get('controles');
+      btnArriba.setText(`Salto / Arriba: ${c.ARRIBA}`);
+      btnIzquierda.setText(`Izquierda: ${c.IZQUIERDA}`);
+      btnAbajo.setText(`Abajo (Fase 2): ${c.ABAJO}`);
+      btnDerecha.setText(`Derecha: ${c.DERECHA}`);
+
       optionsContainer.setVisible(true);
     });
 
-    // Al presionar BACK: se oculta el overlay y reaparece el menú principal
     btnBack.on('pointerdown', () => {
+      if (esperandoTecla) return;
       optionsContainer.setVisible(false);
-      
       titleText.setVisible(true);
       btnPlay.setVisible(true);
       btnOptions.setVisible(true);
@@ -173,7 +219,6 @@ class MenuSeleccion extends Phaser.Scene {
   }
 
   preload() {
-    // Precarga de los spritesheets de animación 'idle' para el menú
     this.load.spritesheet('Shuri_idle', 'assets/animaciones/Main_Characters/Shuri/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('Tyson_idle', 'assets/animaciones/Main_Characters/Tyson/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('Frog_idle', 'assets/animaciones/Main_Characters/Frog/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
@@ -181,11 +226,8 @@ class MenuSeleccion extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor('#87CEEB');
-    
-    // Título superior centrado
     this.add.text(240, 50, 'Elige tu personaje:', { fontSize: '20px', fill: '#ffff00' }).setOrigin(0.5);
 
-    // Verificación y creación de animaciones globales
     ['Shuri', 'Tyson', 'Frog'].forEach(char => {
       if (!this.anims.exists(`${char}_idle`)) {
         this.anims.create({
@@ -197,31 +239,25 @@ class MenuSeleccion extends Phaser.Scene {
       }
     });
 
-    // Definición de coordenadas para alineación horizontal
     const posX = { shuri: 100, tyson: 240, frog: 380 };
     const posYAnim = 140;
     const posYText = 190;
 
-    // --- Personaje 1: Shuri ---
     this.add.sprite(posX.shuri, posYAnim, 'Shuri_idle').play('Shuri_idle').setScale(2);
     const btnShuri = this.add.text(posX.shuri, posYText, 'Shuri', { fontSize: '22px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnShuri.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Shuri' }); });
 
-    // --- Personaje 2: Tyson ---
     this.add.sprite(posX.tyson, posYAnim, 'Tyson_idle').play('Tyson_idle').setScale(2);
     const btnTyson = this.add.text(posX.tyson, posYText, 'Tyson', { fontSize: '22px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnTyson.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Tyson' }); });
 
-    // --- Personaje 3: Frog ---
     this.add.sprite(posX.frog, posYAnim, 'Frog_idle').play('Frog_idle').setScale(2);
     const btnFrog = this.add.text(posX.frog, posYText, 'Frog', { fontSize: '22px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnFrog.on('pointerdown', () => { this.scene.start('GameScene', { personaje: 'Frog' }); });
 
-    // Botón de retorno
     const btnSalir = this.add.text(240, 260, 'Volver al Inicio', { fontSize: '20px', fill: '#ff0000' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnSalir.on('pointerdown', () => { this.scene.start('MenuScene'); });
 
-    // Efecto visual interactivo
     [btnShuri, btnTyson, btnFrog, btnSalir].forEach(btn => {
       btn.on('pointerover', () => btn.setScale(1.2));
       btn.on('pointerout', () => btn.setScale(1));
@@ -279,9 +315,13 @@ class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player, capaTerreno);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
+    // --- LEER MAPEO DINÁMICO DE CONTROLES ---
+    const configControles = this.registry.get('controles') || { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
     this.teclas = this.input.keyboard.addKeys({
-      W: Phaser.Input.Keyboard.KeyCodes.W, A: Phaser.Input.Keyboard.KeyCodes.A,
-      S: Phaser.Input.Keyboard.KeyCodes.S, D: Phaser.Input.Keyboard.KeyCodes.D
+      ARRIBA: Phaser.Input.Keyboard.KeyCodes[configControles.ARRIBA],
+      IZQUIERDA: Phaser.Input.Keyboard.KeyCodes[configControles.IZQUIERDA],
+      ABAJO: Phaser.Input.Keyboard.KeyCodes[configControles.ABAJO],
+      DERECHA: Phaser.Input.Keyboard.KeyCodes[configControles.DERECHA]
     });
 
     const char = this.personajeSeleccionado;
@@ -405,14 +445,15 @@ class GameScene extends Phaser.Scene {
     let moverDerecha;
     let botonSalto;
 
+    // Evaluamos las condiciones según la fase del jefe usando los alias lógicos asignados
     if (this.bossPhase === 1) {
-      moverIzquierda = this.teclas.A.isDown;
-      moverDerecha = this.teclas.D.isDown;
-      botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.W);
+      moverIzquierda = this.teclas.IZQUIERDA.isDown;
+      moverDerecha = this.teclas.DERECHA.isDown;
+      botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.ARRIBA);
     } else {
-      moverIzquierda = this.teclas.D.isDown; 
-      moverDerecha = this.teclas.A.isDown;   
-      botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.S); 
+      moverIzquierda = this.teclas.DERECHA.isDown; 
+      moverDerecha = this.teclas.IZQUIERDA.isDown;   
+      botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.ABAJO); 
     }
 
     if (moverIzquierda) {
@@ -493,7 +534,7 @@ export default function App() {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '20px', fontFamily: 'sans-serif' }}>
       <h2>Solemne 2 - Flujo Completo</h2>
       <div ref={gameRef} style={{ border: '4px solid #333', borderRadius: '8px', overflow: 'hidden' }}></div>
-      <p style={{ marginTop: '10px' }}>Usa <strong>WASD</strong> para moverte y el <strong>Mouse (Clic)</strong> para apuntar y disparar.</p>
+      <p style={{ marginTop: '10px' }}>Usa tus teclas configuradas para moverte y el <strong>Mouse (Clic)</strong> para apuntar y disparar.</p>
     </div>
   );
 }
