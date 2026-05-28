@@ -100,7 +100,7 @@ class MenuScene extends Phaser.Scene {
     });
 
     // ========================================================================
-    // OVERLAY DE OPCIONES (CONFIGURACIÓN DINÁMICA)
+    // OVERLAY DE OPCIONES 
     // ========================================================================
     const overlayBg = this.add.rectangle(240, 160, 480, 320, 0x000000, 0.85);
     overlayBg.setInteractive(); 
@@ -181,7 +181,7 @@ class MenuScene extends Phaser.Scene {
 
     btnArriba.on('pointerdown', () => iniciarRebind(btnArriba, 'ARRIBA', 'Salto / Arriba'));
     btnIzquierda.on('pointerdown', () => iniciarRebind(btnIzquierda, 'IZQUIERDA', 'Izquierda'));
-    btnAbajo.on('pointerdown', () => iniciarRebind(btnAbajo, 'ABAJO', 'Abajo (Fase 2)'));
+    btnAbajo.on('pointerdown', () => iniciarRebind(btnAbajo, 'ABAJO', 'Abajo'));
     btnDerecha.on('pointerdown', () => iniciarRebind(btnDerecha, 'DERECHA', 'Derecha'));
 
     // Flujo de ocultación recíproco
@@ -194,7 +194,7 @@ class MenuScene extends Phaser.Scene {
       const c = this.registry.get('controles');
       btnArriba.setText(`Salto / Arriba: ${c.ARRIBA}`);
       btnIzquierda.setText(`Izquierda: ${c.IZQUIERDA}`);
-      btnAbajo.setText(`Abajo (Fase 2): ${c.ABAJO}`);
+      btnAbajo.setText(`Abajo: ${c.ABAJO}`);
       btnDerecha.setText(`Derecha: ${c.DERECHA}`);
 
       optionsContainer.setVisible(true);
@@ -438,6 +438,12 @@ class GameScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor('#87CEEB'); 
       }
     });
+
+    // Detectar ESC para pausar el juego
+    this.input.keyboard.on('keydown-ESC', () => {
+      this.scene.pause(); // Pausa físicas, updates y timers de GameScene
+      this.scene.launch('PauseScene'); // Lanza la escena de pausa superpuesta
+    });
   }
 
   update() {
@@ -505,6 +511,64 @@ class GameScene extends Phaser.Scene {
 }
 
 // ==============================================================================
+// ESCENA 4: MENÚ DE PAUSA
+// ==============================================================================
+class PauseScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'PauseScene' });
+  }
+
+  create() {
+    // 1. Oscurecer la pantalla (semi-transparente).
+    // Los valores 240, 160 son el centro de tu pantalla (480x320) y 0.7 es la opacidad.
+    const overlay = this.add.rectangle(240, 160, 480, 320, 0x000000, 0.7);
+
+    // 2. Texto "PAUSA" en la parte superior
+    this.add.text(240, 80, 'PAUSA', {
+      fontSize: '40px',
+      fill: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // 3. Botón para Continuar 
+    const btnContinuar = this.add.text(240, 150, 'Continuar', {
+      fontSize: '24px',
+      fill: '#00ff00',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    btnContinuar.on('pointerdown', () => {
+      this.scene.resume('GameScene'); // Reanuda la escena principal
+      this.scene.stop();              // Cierra la escena de pausa
+    });
+
+    // 4. Botón "Volver al menú"
+    const btnVolver = this.add.text(240, 210, 'Volver al menú', {
+      fontSize: '24px',
+      fill: '#ff0000',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    btnVolver.on('pointerdown', () => {
+      this.scene.stop('GameScene');  // Detiene el juego por completo
+      this.scene.start('MenuScene'); // Vuelve al menú principal
+    });
+
+    // Efectos Hover para ambos botones
+    [btnContinuar, btnVolver].forEach(btn => {
+      btn.on('pointerover', () => btn.setScale(1.1));
+      btn.on('pointerout', () => btn.setScale(1));
+    });
+
+    // 5. Permitir quitar la pausa volviendo a presionar ESC
+    this.input.keyboard.on('keydown-ESC', () => {
+      this.scene.resume('GameScene');
+      this.scene.stop();
+    });
+  }
+}
+
+// ==============================================================================
 // COMPONENTE REACT PRINCIPAL
 // ==============================================================================
 export default function App() {
@@ -523,7 +587,8 @@ export default function App() {
         default: 'arcade',
         arcade: { gravity: { y: 800 }, debug: false }
       },
-      scene: [MenuScene, MenuSeleccion, GameScene]
+      // Añadida PauseScene al final de esta lista
+      scene: [MenuScene, MenuSeleccion, GameScene, PauseScene] 
     };
 
     const game = new Phaser.Game(config);
