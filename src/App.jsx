@@ -300,8 +300,50 @@ class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#87CEEB'); 
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
+    // ========================================================================
+    // BARRA DE VIDA VISUAL CON CORAZÓN Y NÚMEROS CENTRADOS
+    // ========================================================================
     this.playerHealth = 100;
-    this.healthText = this.add.text(10, 10, 'Vida: 100', { fontSize: '20px', fill: '#ffffff', backgroundColor: '#000' }).setScrollFactor(0);
+    this.maxHealth = 100;
+    
+    const barX = 10;
+    const barY = 10;
+    const barWidth = 150;
+    const barHeight = 15;
+
+    // 1. Dibujar fondo oscuro con transparencia y marco blanco delgado
+    this.healthBg = this.add.graphics().setScrollFactor(0);
+    this.healthBg.fillStyle(0x000000, 0.6); // Negro con 60% opacidad
+    this.healthBg.fillRect(barX, barY, barWidth, barHeight);
+    this.healthBg.lineStyle(1, 0xffffff, 1); // Marco blanco de grosor 1
+    this.healthBg.strokeRect(barX, barY, barWidth, barHeight);
+
+    // 2. Gráfico para la vida actual (la parte roja)
+    this.healthBar = this.add.graphics().setScrollFactor(0);
+
+    // 3. Texto del corazón blanquito y los números (completamente centrado)
+    this.healthText = this.add.text(barX + barWidth / 2, barY + barHeight / 2, '', {
+      fontSize: '11px',
+      fill: '#ffffff',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif'
+    }).setOrigin(0.5).setScrollFactor(0);
+    
+    // Función para actualizar el relleno rojo y el texto centralizado según la vida restante
+    this.updateHealthBar = () => {
+      this.healthBar.clear();
+      const currentWidth = Math.max(0, (this.playerHealth / this.maxHealth) * barWidth);
+      this.healthBar.fillStyle(0xff0000, 1); // Rojo sin transparencia
+      this.healthBar.fillRect(barX, barY, currentWidth, barHeight);
+
+      // Actualizar el texto interior con el formato pedido: ♥ Vida / Total
+      const vidaMostrada = Math.max(0, this.playerHealth);
+      this.healthText.setText(`♥ ${vidaMostrada} / ${this.maxHealth}`);
+    };
+
+    // Llamamos por primera vez para inicializar los gráficos de la vida al completo
+    this.updateHealthBar();
+    // ========================================================================
 
     if (this.personajeSeleccionado === 'Shuri') {
       this.player = new Shuri(this, 50, 50);
@@ -416,7 +458,10 @@ class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.bossBullets, (player, bullet) => {
       bullet.destroy();
       this.playerHealth -= 10;
-      this.healthText.setText('Vida: ' + this.playerHealth);
+      
+      // Actualizamos tanto la barra roja como el texto indicador al recibir daño
+      this.updateHealthBar();
+
       player.setTint(0xff0000);
       this.time.delayedCall(200, () => player.clearTint());
 
@@ -587,7 +632,6 @@ export default function App() {
         default: 'arcade',
         arcade: { gravity: { y: 800 }, debug: false }
       },
-      // Añadida PauseScene al final de esta lista
       scene: [MenuScene, MenuSeleccion, GameScene, PauseScene] 
     };
 
