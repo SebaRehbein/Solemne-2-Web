@@ -498,7 +498,7 @@ class GameScene extends Phaser.Scene {
     this.boss.setCollideWorldBounds(true);
     this.boss.setBounce(1); 
     
-    this.bossHealth = 25; 
+    this.bossHealth = 2500; 
     this.bossPhase = 1;     
     this.physics.add.collider(this.boss, capaMarco);
     this.physics.add.collider(this.boss, capaTerreno);
