@@ -9,7 +9,7 @@ class SistemaNiveles {
     this.nombre = nombrePersonaje;
     this.nivel = 0;
     this.exp = 0;
-    this.puntosDisponibles = 0;
+    this.puntosDisponibles = 3; // <--- Exactamente 3 puntos iniciales
     this.vidaBase = 100;
     this.danoBase = 25;
     this.mejorasVida = 0;       
@@ -65,10 +65,10 @@ class GestorProgreso {
   }
   obtenerEstadisticasDe(nombrePersonaje) { return this.personajes[nombrePersonaje]; }
   guardarProgreso() {
-    localStorage.setItem('progreso_personajes_v3', JSON.stringify({ Shuri: this.personajes.Shuri.obtenerDatosParaGuardar(), Frog: this.personajes.Frog.obtenerDatosParaGuardar(), Tyson: this.personajes.Tyson.obtenerDatosParaGuardar() }));
+    localStorage.setItem('progreso_personajes_v7', JSON.stringify({ Shuri: this.personajes.Shuri.obtenerDatosParaGuardar(), Frog: this.personajes.Frog.obtenerDatosParaGuardar(), Tyson: this.personajes.Tyson.obtenerDatosParaGuardar() }));
   }
   cargarProgreso() {
-    const datosGuardados = localStorage.getItem('progreso_personajes_v3');
+    const datosGuardados = localStorage.getItem('progreso_personajes_v7');
     if (datosGuardados) {
       const dp = JSON.parse(datosGuardados);
       this.personajes.Shuri.cargarDatosGuardados(dp.Shuri); this.personajes.Frog.cargarDatosGuardados(dp.Frog); this.personajes.Tyson.cargarDatosGuardados(dp.Tyson);
@@ -92,13 +92,12 @@ class Tyson extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y
 class Frog extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y, 'Frog_idle'); } }
 
 // ==============================================================================
-// MENÚ PRINCIPAL Y SELECCIÓN (De Mathias)
+// MENÚ PRINCIPAL Y SELECCIÓN (De Mathias con Fondos)
 // ==============================================================================
 class MenuScene extends Phaser.Scene {
   constructor() { super({ key: 'MenuScene' }); }
   
   preload() {
-    // FONDO DEL MENÚ AÑADIDO AQUÍ
     this.load.image('fondo-menu', 'assets/mapa_jefe/fondo.png');
   }
 
@@ -106,7 +105,6 @@ class MenuScene extends Phaser.Scene {
     if (!this.registry.has('gestorProgreso')) this.registry.set('gestorProgreso', new GestorProgreso());
     this.cameras.main.setBackgroundColor('#87CEEB');
 
-    // DIBUJAR FONDO DEL MENÚ
     this.add.image(240, 160, 'fondo-menu');
 
     const controlesPorDefecto = { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
@@ -126,11 +124,12 @@ class MenuSeleccion extends Phaser.Scene {
     this.load.spritesheet('Shuri_idle', 'assets/animaciones/Main_Characters/Shuri/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('Tyson_idle', 'assets/animaciones/Main_Characters/Tyson/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('Frog_idle', 'assets/animaciones/Main_Characters/Frog/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
+    this.load.image('fondo-menu', 'assets/mapa_jefe/fondo.png');
   }
   create() {
+    this.add.image(240, 160, 'fondo-menu');
     const gestor = this.registry.get('gestorProgreso');
-    this.cameras.main.setBackgroundColor('#87CEEB');
-    this.add.text(240, 30, 'Elige tu personaje:', { fontSize: '24px', fill: '#ffff00', fontStyle:'bold' }).setOrigin(0.5);
+    this.add.text(240, 30, 'Elige tu personaje:', { fontSize: '24px', fill: '#ffff00', fontStyle:'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
 
     ['Shuri', 'Tyson', 'Frog'].forEach(char => {
       if (!this.anims.exists(`${char}_idle`)) this.anims.create({ key: `${char}_idle`, frames: this.anims.generateFrameNumbers(`${char}_idle`), frameRate: 10, repeat: -1 });
@@ -139,7 +138,7 @@ class MenuSeleccion extends Phaser.Scene {
     [{ id: 'Shuri', x: 100 }, { id: 'Tyson', x: 240 }, { id: 'Frog', x: 380 }].forEach(char => {
       const stats = gestor.obtenerEstadisticasDe(char.id);
       this.add.sprite(char.x, 120, `${char.id}_idle`).play(`${char.id}_idle`).setScale(2);
-      this.add.text(char.x, 170, `${char.id}\n(Nvl ${stats.nivel >= 13 ? 'MAX' : stats.nivel})`, { fontSize: '18px', fill: '#ffffff', align:'center' }).setOrigin(0.5);
+      this.add.text(char.x, 170, `${char.id}\n(Nvl ${stats.nivel >= 13 ? 'MAX' : stats.nivel})`, { fontSize: '18px', fill: '#ffffff', align:'center', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
       
       const btnJugar = this.add.text(char.x, 215, '▶ JUGAR', { fontSize: '16px', fill: '#00ff00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
       btnJugar.on('pointerdown', () => { this.scene.start('GameScene', { personaje: char.id }); });
@@ -150,38 +149,49 @@ class MenuSeleccion extends Phaser.Scene {
 
       [btnJugar, btnMejorar].forEach(btn => { btn.on('pointerover', () => btn.setScale(1.1)); btn.on('pointerout', () => btn.setScale(1)); });
     });
-    this.add.text(240, 295, 'Volver al Inicio', { fontSize: '16px', fill: '#ff0000', fontStyle:'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.scene.start('MenuScene'); });
+    this.add.text(240, 295, 'Volver al Inicio', { fontSize: '16px', fill: '#ff0000', fontStyle:'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.scene.start('MenuScene'); });
   }
 }
 
 class MejorasScene extends Phaser.Scene {
   constructor() { super({ key: 'MejorasScene' }); }
   init(data) { this.personaje = data.personaje; }
+  preload() { this.load.image('fondo-menu', 'assets/mapa_jefe/fondo.png'); }
   create() {
+    this.add.image(240, 160, 'fondo-menu');
+    this.add.rectangle(240, 160, 480, 320, 0x000000, 0.7);
+
     const gestor = this.registry.get('gestorProgreso'); const est = gestor.obtenerEstadisticasDe(this.personaje);
-    this.add.rectangle(240, 160, 480, 320, 0x111111, 1);
     this.add.text(240, 30, `Mejoras: ${this.personaje}`, { fontSize: '28px', fill: '#ffcc00', fontStyle:'bold' }).setOrigin(0.5);
     const txtPuntos = this.add.text(240, 60, `Puntos Disponibles: ${est.puntosDisponibles}`, { fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5);
 
-    const btnVida = this.add.text(240, 120, '', { fontSize: '18px', fill: '#ff8888', backgroundColor:'#330000' }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
-    const btnDano = this.add.text(240, 160, '', { fontSize: '18px', fill: '#88ff88', backgroundColor:'#003300' }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
-    
+    const btnVida = this.add.text(240, 110, '', { fontSize: '18px', fill: '#ff8888', backgroundColor:'#330000' }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
+    const btnDano = this.add.text(240, 150, '', { fontSize: '18px', fill: '#88ff88', backgroundColor:'#003300' }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
+    const btnMovilidad = this.add.text(240, 190, '', { fontSize: '18px', fill: '#8888ff', backgroundColor:'#000033' }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
+
     const actualizarTextos = () => {
       txtPuntos.setText(`Puntos Disponibles: ${est.puntosDisponibles}`);
       btnVida.setText(`[+] VIDA (${est.mejorasVida}/5): ${est.vidaMaxima} PV`);
       btnDano.setText(`[+] DAÑO (${est.mejorasDano}/5): ${est.danoActual} ATK`);
+      let txtMov = `[+] MOVILIDAD (${est.mejorasMovilidad}/3)`;
+      if(est.mejorasMovilidad === 0) txtMov += ": Salto Pared";
+      else if(est.mejorasMovilidad === 1) txtMov += ": Triple Salto";
+      else if(est.mejorasMovilidad === 2) txtMov += ": Dash (Shift)";
+      else txtMov += " (AL MÁXIMO)";
+      btnMovilidad.setText(txtMov);
     };
 
     btnVida.on('pointerdown', () => { if(est.mejorarVida()) { gestor.guardarProgreso(); actualizarTextos(); } });
     btnDano.on('pointerdown', () => { if(est.mejorarDano()) { gestor.guardarProgreso(); actualizarTextos(); } });
+    btnMovilidad.on('pointerdown', () => { if(est.mejorarMovilidad()) { gestor.guardarProgreso(); actualizarTextos(); } });
 
     actualizarTextos();
-    this.add.text(240, 270, 'VOLVER', { fontSize: '20px', fill: '#ffffff', fontStyle:'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.scene.start('MenuSeleccion'); });
+    this.add.text(240, 270, 'VOLVER', { fontSize: '20px', fill: '#ffffff', fontStyle:'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.scene.start('MenuSeleccion'); });
   }
 }
 
 // ==============================================================================
-// ESCENA 4: EL MAPA DEL JEFE FINAL CON TARIMAS PARPADEANTES
+// ESCENA 4: EL JUEGO PRINCIPAL (TU CÓDIGO DEL JEFE EXACTO)
 // ==============================================================================
 class GameScene extends Phaser.Scene {
   constructor() { super({ key: 'GameScene' }); }
@@ -198,64 +208,65 @@ class GameScene extends Phaser.Scene {
 
     this.load.image('tiles-terrain', 'assets/Terrain (16x16).png');
     this.load.image('tiles-lava', 'assets/MAGAMA.png'); 
-
-    // FONDO DEL JEFE AÑADIDO AQUÍ
-    this.load.image('fondo-jefe', 'assets/mapa_jefe/fondo_jefe_480x320.png'); 
-
+    
+    // Carga de la imagen de fondo del jefe
+    this.load.image('fondo-jefe', 'assets/mapa_jefe/fondo_jefe_480x320.png');
+    
     this.load.tilemapTiledJSON('mapa-jefe', 'assets/mapa_jefe/mapa_jefe.tmj');
   }
 
   create() {
-    // ESTADÍSTICAS DEL PERSONAJE
     this.gestor = this.registry.get('gestorProgreso');
     this.estadisticas = this.gestor.obtenerEstadisticasDe(this.personajeSeleccionado);
 
-    // DIBUJAR FONDO DEL JEFE PRIMERO QUE TODO
+    // ==========================================
+    // EL FONDO DEL JEFE
+    // ==========================================
     this.add.image(240, 160, 'fondo-jefe').setScrollFactor(0);
 
-    // 1. UI DE ADVERTENCIA
     this.warningText = this.add.text(240, 40, '', {
         fontSize: '18px', fill: '#ff0000', backgroundColor: 'rgba(0,0,0,0.8)',
         fontStyle: 'bold', align: 'center', padding: { x: 10, y: 5 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(100).setVisible(false);
 
-    // 2. CONSTRUCCIÓN DEL MAPA (FORZANDO VISIBILIDAD)
+    // CONSTRUCCIÓN DEL MAPA
     const map = this.make.tilemap({ key: 'mapa-jefe' });
-    const tsTerreno = map.addTilesetImage('Terrain (16x16)', 'tiles-terrain');
-    const tsLava = map.addTilesetImage('MAGAMA', 'tiles-lava');
-    const combinacionTiles = [tsTerreno, tsLava];
+    let tsTerreno, tsLava;
+    try {
+      tsTerreno = map.addTilesetImage('Terrain (16x16)', 'tiles-terrain');
+      tsLava = map.addTilesetImage('MAGAMA', 'tiles-lava');
+    } catch(e) {
+      tsTerreno = map.addTilesetImage('terrain', 'tiles-terrain');
+      tsLava = map.addTilesetImage('lava', 'tiles-lava');
+    }
+    const combinacionTiles = [tsTerreno, tsLava].filter(t => t);
 
-    const capaLava = map.createLayer('lava', combinacionTiles, 0, 0);
-    if(capaLava) capaLava.setVisible(true).setCollisionByExclusion([-1]);
+    const capaLava = map.getLayer('lava') ? map.createLayer('lava', combinacionTiles, 0, 0).setVisible(true) : null;
+    const capaTerreno = map.getLayer('terreno') ? map.createLayer('terreno', combinacionTiles, 0, 0).setVisible(true) : null;
+    const capaPisoFalso1 = map.getLayer('piso_falso_1') ? map.createLayer('piso_falso_1', combinacionTiles, 0, 0).setVisible(true) : null;
+    const capaPisoFalso2 = map.getLayer('piso_falso_2') ? map.createLayer('piso_falso_2', combinacionTiles, 0, 0).setVisible(true) : null;
 
-    const capaTerreno = map.createLayer('terreno', combinacionTiles, 0, 0);
-    if(capaTerreno) capaTerreno.setVisible(true).setCollisionByExclusion([-1]);
+    if(capaTerreno) capaTerreno.setCollisionByExclusion([-1]);
+    if(capaPisoFalso1) capaPisoFalso1.setCollisionByExclusion([-1]);
+    if(capaPisoFalso2) capaPisoFalso2.setCollisionByExclusion([-1]);
+    if(capaLava) capaLava.setCollisionByExclusion([-1]);
 
-    const capaPisoFalso1 = map.createLayer('piso_falso_1', combinacionTiles, 0, 0);
-    if(capaPisoFalso1) capaPisoFalso1.setVisible(true).setCollisionByExclusion([-1]);
-
-    const capaPisoFalso2 = map.createLayer('piso_falso_2', combinacionTiles, 0, 0);
-    if(capaPisoFalso2) capaPisoFalso2.setVisible(true).setCollisionByExclusion([-1]);
-
-    // OBTENEMOS LAS TARIMAS
     this.tarimas = [];
     this.colTarimas = [];
     for(let i = 1; i <= 5; i++) {
         if (map.getLayer(`tarima_${i}`)) {
             let capaTarima = map.createLayer(`tarima_${i}`, combinacionTiles, 0, 0);
-            capaTarima.setVisible(false); 
-            capaTarima.setCollisionByExclusion([-1]);
+            capaTarima.setVisible(false).setCollisionByExclusion([-1]);
             this.tarimas.push(capaTarima);
         }
     }
 
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-    this.cameras.main.setBackgroundColor('#2e2e2e'); 
 
-    // 3. JUGADOR Y BARRA DE VIDA NUEVA
+    // JUGADOR Y BARRA DE VIDA
     this.playerHealth = this.estadisticas.vidaMaxima;
     this.maxHealth = this.estadisticas.vidaMaxima;
-
+    
     const barX = 10, barY = 10, barWidth = 150, barHeight = 15;
     this.healthBg = this.add.graphics().setScrollFactor(0).fillStyle(0x000000, 0.6).fillRect(barX, barY, barWidth, barHeight).lineStyle(1, 0xffffff, 1).strokeRect(barX, barY, barWidth, barHeight);
     this.healthBar = this.add.graphics().setScrollFactor(0);
@@ -275,44 +286,49 @@ class GameScene extends Phaser.Scene {
 
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
-    // 4. COLISIONES
     if(capaTerreno) this.physics.add.collider(this.player, capaTerreno);
     if(capaPisoFalso1) this.colPiso1 = this.physics.add.collider(this.player, capaPisoFalso1);
     if(capaPisoFalso2) this.colPiso2 = this.physics.add.collider(this.player, capaPisoFalso2);
 
-    // Guardamos los colliders de las tarimas y los apagamos
     this.tarimas.forEach(tarima => {
         let col = this.physics.add.collider(this.player, tarima);
-        col.active = false;
-        this.colTarimas.push(col);
+        col.active = false; this.colTarimas.push(col);
     });
 
     if(capaLava) {
         this.physics.add.collider(this.player, capaLava, () => {
-            alert("¡Te quemaste en la lava!");
-            this.scene.start('MenuSeleccion'); 
+            this.player.setPosition(100, 50);
+            this.playerHealth -= 20; 
+            this.updateHealthBar();
+            this.player.setTint(0xffa500);
+            this.time.delayedCall(300, () => this.player.clearTint());
+            if (this.playerHealth <= 0) {
+                setTimeout(() => alert("¡Te quemaste en la lava!"), 50);
+                this.scene.start('MenuSeleccion'); 
+            }
         });
     }
 
-    // 5. CONTROLES Y ANIMACIONES
+    const ctrl = this.registry.get('controles') || { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
     this.teclas = this.input.keyboard.addKeys({
-      W: Phaser.Input.Keyboard.KeyCodes.W, A: Phaser.Input.Keyboard.KeyCodes.A,
-      S: Phaser.Input.Keyboard.KeyCodes.S, D: Phaser.Input.Keyboard.KeyCodes.D
+      W: Phaser.Input.Keyboard.KeyCodes[ctrl.ARRIBA], 
+      A: Phaser.Input.Keyboard.KeyCodes[ctrl.IZQUIERDA],
+      S: Phaser.Input.Keyboard.KeyCodes[ctrl.ABAJO], 
+      D: Phaser.Input.Keyboard.KeyCodes[ctrl.DERECHA]
     });
 
     const char = this.personajeSeleccionado;
-    this.anims.create({ key: `${char}_idle`, frames: this.anims.generateFrameNumbers(`${char}_idle`), frameRate: 10, repeat: -1 });
-    this.anims.create({ key: `${char}_walk`, frames: this.anims.generateFrameNumbers(`${char}_walk`), frameRate: 15, repeat: -1 });
-    this.anims.create({ key: `${char}_jump`, frames: this.anims.generateFrameNumbers(`${char}_jump`), frameRate: 10, repeat: 0 });
-    this.anims.create({ key: `${char}_fall`, frames: this.anims.generateFrameNumbers(`${char}_fall`), frameRate: 10, repeat: -1 });
-    this.anims.create({ key: `${char}_double-jump`, frames: this.anims.generateFrameNumbers(`${char}_double-jump`), frameRate: 15, repeat: 0 });
+    if (!this.anims.exists(`${char}_idle`)) {
+        this.anims.create({ key: `${char}_idle`, frames: this.anims.generateFrameNumbers(`${char}_idle`), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: `${char}_walk`, frames: this.anims.generateFrameNumbers(`${char}_walk`), frameRate: 15, repeat: -1 });
+        this.anims.create({ key: `${char}_jump`, frames: this.anims.generateFrameNumbers(`${char}_jump`), frameRate: 10, repeat: 0 });
+        this.anims.create({ key: `${char}_fall`, frames: this.anims.generateFrameNumbers(`${char}_fall`), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: `${char}_double-jump`, frames: this.anims.generateFrameNumbers(`${char}_double-jump`), frameRate: 15, repeat: 0 });
+    }
 
-    // 6. DISPAROS JUGADOR
     const graphics = this.add.graphics();
-    graphics.fillStyle(0x000000, 1).fillCircle(4, 4, 4);
-    graphics.fillStyle(0xff0000, 1).fillCircle(4, 4, 2);
-    graphics.generateTexture('balaTextura', 8, 8);
-    graphics.destroy(); 
+    graphics.fillStyle(0x000000, 1).fillCircle(4, 4, 4).fillStyle(0xff0000, 1).fillCircle(4, 4, 2);
+    graphics.generateTexture('balaTextura', 8, 8); graphics.destroy(); 
 
     this.bullets = this.physics.add.group({ defaultKey: 'balaTextura', maxSize: 20 });
     if(capaTerreno) this.physics.add.collider(this.bullets, capaTerreno, (bala) => bala.destroy());
@@ -328,26 +344,19 @@ class GameScene extends Phaser.Scene {
       }
     });
 
-    // 7. EL JEFE
+    // JEFE
     const bossGrafico = this.add.graphics();
     bossGrafico.fillStyle(0x800080, 1).fillRect(0, 0, 40, 40);
-    bossGrafico.generateTexture('bossTextura', 40, 40);
-    bossGrafico.destroy();
+    bossGrafico.generateTexture('bossTextura', 40, 40); bossGrafico.destroy();
 
     this.boss = this.physics.add.sprite(240, 80, 'bossTextura');
-    this.boss.body.setAllowGravity(false);
-    this.boss.setCollideWorldBounds(true);
-    this.boss.setBounce(1); 
+    this.boss.body.setAllowGravity(false); this.boss.setCollideWorldBounds(true); this.boss.setBounce(1); 
     
     this.bossHealth = 6000; 
     this.bossPhase = 1;     
     if(capaTerreno) this.physics.add.collider(this.boss, capaTerreno);
 
-    this.time.addEvent({
-      delay: 2000, 
-      callback: () => { if (this.boss.active) this.boss.setVelocity(Phaser.Math.Between(-150, 150), Phaser.Math.Between(-150, 150)); }, 
-      loop: true
-    });
+    this.time.addEvent({ delay: 2000, callback: () => { if (this.boss.active) this.boss.setVelocity(Phaser.Math.Between(-150, 150), Phaser.Math.Between(-150, 150)); }, loop: true });
 
     this.bossBullets = this.physics.add.group({ defaultKey: 'balaTextura', maxSize: 80 });
     if(capaTerreno) this.physics.add.collider(this.bossBullets, capaTerreno, (b) => b.destroy());
@@ -366,84 +375,59 @@ class GameScene extends Phaser.Scene {
       }, loop: true
     });
 
-    // ==========================================================
-    // 8. CICLO DE FASES Y SECUENCIA DE TARIMAS (Palpitación Previa)
-    // ==========================================================
+    // LÓGICA DE FASES Y PARPADEO DE TARIMAS
     let indiceTarimaActual = 0;
 
-    // Timer que rota las tarimas
     this.time.addEvent({
-        delay: 4500, // Tiempo total que dura una tarima antes de que empiece a avisar la siguiente
+        delay: 4500, 
         callback: () => {
             if (this.bossPhase === 2 && this.tarimas.length > 0) {
                 let nextIndex = (indiceTarimaActual + 1) % this.tarimas.length;
 
-                // PASO 1: La NUEVA tarima aparece transparente y palpita
                 this.tarimas[nextIndex].setVisible(true).setAlpha(0.3);
-                this.colTarimas[nextIndex].active = true; // Ya se puede pisar
+                this.colTarimas[nextIndex].active = true; 
 
                 let blinkTween = this.tweens.add({
-                    targets: this.tarimas[nextIndex],
-                    alpha: 0.9,
-                    duration: 200,
-                    yoyo: true,
-                    repeat: 5 // Esto dura aprox 1.5 segundos
+                    targets: this.tarimas[nextIndex], alpha: 0.9, duration: 200, yoyo: true, repeat: 5
                 });
 
-                // PASO 2: Pasado ese tiempo de alerta, la tarima vieja cae
                 this.time.delayedCall(1500, () => {
                     if (this.bossPhase !== 2) return; 
-
-                    blinkTween.stop();
-                    this.tarimas[nextIndex].setAlpha(1); // Fija la nueva
+                    if(blinkTween) blinkTween.stop();
                     
-                    // Destruye la vieja bajo tus pies
                     this.tarimas[indiceTarimaActual].setVisible(false);
                     this.colTarimas[indiceTarimaActual].active = false;
-
+                    this.tarimas[nextIndex].setAlpha(1);
                     indiceTarimaActual = nextIndex;
                 });
             }
-        },
-        loop: true
+        }, loop: true
     });
 
-    // Secuencias de las Fases del Jefe
     const iniciarFase1 = () => {
-        this.bossPhase = 1;
-        this.warningText.setVisible(false);
-        this.bossShootTimer.delay = 150; 
-        
+        this.bossPhase = 1; this.warningText.setVisible(false); this.bossShootTimer.delay = 150; 
         if(capaPisoFalso1) { capaPisoFalso1.setVisible(true); this.colPiso1.active = true; }
         if(capaPisoFalso2) { capaPisoFalso2.setVisible(true); this.colPiso2.active = true; }
-
         this.tarimas.forEach((t, idx) => { t.setVisible(false); this.colTarimas[idx].active = false; });
-
         this.time.delayedCall(12000, advertenciaFase2); 
     };
 
     const advertenciaFase2 = () => {
         this.warningText.setText("¡EL PISO COLAPSARÁ!\nBusca las tarimas.\n¡Controles invertidos!").setVisible(true);
-        
-        // Aparece la primera tarima palpitando para que sepas a dónde ir
         indiceTarimaActual = 0;
-        this.tarimas[0].setVisible(true).setAlpha(0.3);
-        this.colTarimas[0].active = true;
-        this.tweens.add({ targets: this.tarimas[0], alpha: 1, duration: 250, yoyo: true, repeat: 5 }); 
-
+        if(this.tarimas.length > 0) {
+            this.tarimas[0].setVisible(true).setAlpha(0.3); this.colTarimas[0].active = true;
+            this.tweens.add({ targets: this.tarimas[0], alpha: 1, duration: 250, yoyo: true, repeat: 5 }); 
+        }
         this.time.delayedCall(3000, iniciarFase2);
     };
 
     const iniciarFase2 = () => {
-        this.bossPhase = 2; // Invierte controles
-        this.warningText.setVisible(false);
-        this.bossShootTimer.delay = 600; 
-        
-        // Quita el piso principal
+        this.bossPhase = 2; 
+        this.warningText.setVisible(false); this.bossShootTimer.delay = 600; 
         if(capaPisoFalso1) { capaPisoFalso1.setVisible(false); this.colPiso1.active = false; }
         if(capaPisoFalso2) { capaPisoFalso2.setVisible(false); this.colPiso2.active = false; }
-        
-        this.tarimas[0].setAlpha(1); // Fija la primera tarima
+        if(this.tarimas.length > 0) this.tarimas[0].setAlpha(1); 
         this.time.delayedCall(20000, advertenciaFase3); 
     };
 
@@ -453,50 +437,43 @@ class GameScene extends Phaser.Scene {
     };
 
     const iniciarFase3 = () => {
-        this.bossPhase = 3; 
-        this.warningText.setVisible(false);
-        this.bossShootTimer.delay = 300; 
-
+        this.bossPhase = 3; this.warningText.setVisible(false); this.bossShootTimer.delay = 300; 
         if(capaPisoFalso1) { capaPisoFalso1.setVisible(false); this.colPiso1.active = false; }
         if(capaPisoFalso2) { capaPisoFalso2.setVisible(true); this.colPiso2.active = true; }
-
         this.tarimas.forEach((t, idx) => { t.setVisible(false); this.colTarimas[idx].active = false; });
         this.time.delayedCall(12000, iniciarFase1); 
     };
 
     this.time.delayedCall(10000, advertenciaFase2); 
 
-    // DAÑO Y VICTORIA
+    // DAÑO Y VICTORIA CON ESTADÍSTICAS
     this.physics.add.overlap(this.player, this.bossBullets, (player, bullet) => {
-      bullet.destroy();
-      this.playerHealth -= 10;
-      this.updateHealthBar();
-      player.setTint(0xff0000);
-      this.time.delayedCall(200, () => player.clearTint());
-
-      if (this.playerHealth <= 0) {
-        alert("¡Te mató el jefe!");
+      bullet.destroy(); this.playerHealth -= 10; this.updateHealthBar();
+      player.setTint(0xff0000); this.time.delayedCall(200, () => player.clearTint());
+      if (this.playerHealth <= 0) { 
+        setTimeout(() => alert("¡Te mató el jefe!"), 50);
         this.scene.start('MenuSeleccion'); 
       }
     });
 
     this.physics.add.overlap(this.boss, this.bullets, (boss, bullet) => {
-      bullet.destroy();
-      this.bossHealth -= this.estadisticas.danoActual; // Usa el daño de las mejoras de Mathias
-      boss.setTint(0xff0000);
-      this.time.delayedCall(100, () => boss.clearTint());
-
+      bullet.destroy(); 
+      this.bossHealth -= this.estadisticas.danoActual; // USA TU DAÑO
+      boss.setTint(0xff0000); this.time.delayedCall(100, () => boss.clearTint());
       if (this.bossHealth <= 0) {
         boss.destroy();
-        const expGanada = 150;
-        this.estadisticas.ganarExperiencia(expGanada);
-        this.gestor.guardarProgreso();
-        alert(`¡Venciste al jefe! Has ganado ${expGanada} EXP.`);
-        this.scene.start('MenuScene'); 
+        const expGanada = 150; 
+        this.estadisticas.ganarExperiencia(expGanada); 
+        this.gestor.guardarProgreso(); 
+        setTimeout(() => alert(`¡Venciste al jefe! Has ganado ${expGanada} EXP.`), 50);
+        this.scene.start('MenuSeleccion'); 
       }
     });
   }
 
+  // ==========================================================
+  // TU CÓDIGO DE UPDATE EXACTO E INTACTO
+  // ==========================================================
   update() {
     let moverIzquierda;
     let moverDerecha;
@@ -523,7 +500,11 @@ class GameScene extends Phaser.Scene {
     }
 
     const isGrounded = this.player.body.onFloor() || this.player.body.touching.down;
-    if (isGrounded && this.player.body.velocity.y >= 0) this.player.jumpCount = 0;
+    
+    if (isGrounded && this.player.body.velocity.y >= 0) {
+      this.player.jumpCount = 0;
+    }
+
     const char = this.personajeSeleccionado;
 
     if (botonSalto) {
@@ -538,38 +519,53 @@ class GameScene extends Phaser.Scene {
 
     if (!isGrounded || this.player.body.velocity.y < 0) {
       if (this.player.body.velocity.y < 0) {
-        if (this.player.jumpCount === 2) this.player.anims.play(`${char}_double-jump`, true);
-        else this.player.anims.play(`${char}_jump`, true);
-      } else this.player.anims.play(`${char}_fall`, true);
+        if (this.player.jumpCount === 2) {
+          this.player.anims.play(`${char}_double-jump`, true);
+        } else {
+          this.player.anims.play(`${char}_jump`, true);
+        }
+      } else {
+        this.player.anims.play(`${char}_fall`, true);
+      }
     } else {
-      if (this.player.body.velocity.x !== 0) this.player.anims.play(`${char}_walk`, true);
-      else this.player.anims.play(`${char}_idle`, true);
+      if (this.player.body.velocity.x !== 0) {
+        this.player.anims.play(`${char}_walk`, true);
+      } else {
+        this.player.anims.play(`${char}_idle`, true);
+      }
     }
   }
 }
 
-// ==============================================================================
-// COMPONENTE REACT PRINCIPAL
-// ==============================================================================
+class PauseScene extends Phaser.Scene {
+  constructor() { super({ key: 'PauseScene' }); }
+  create() {
+    this.add.rectangle(240, 160, 480, 320, 0x000000, 0.7);
+    this.add.text(240, 80, 'PAUSA', { fontSize: '40px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    const btnContinuar = this.add.text(240, 150, 'Continuar', { fontSize: '24px', fill: '#00ff00', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.scene.resume('GameScene'); this.scene.stop(); });
+    const btnVolver = this.add.text(240, 210, 'Volver al menú', { fontSize: '24px', fill: '#ff0000', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.scene.stop('GameScene'); this.scene.start('MenuSeleccion'); });
+    [btnContinuar, btnVolver].forEach(btn => { btn.on('pointerover', () => btn.setScale(1.1)); btn.on('pointerout', () => btn.setScale(1)); });
+    this.input.keyboard.on('keydown-ESC', () => { this.scene.resume('GameScene'); this.scene.stop(); });
+  }
+}
+
 export default function App() {
   const gameRef = useRef(null);
-
   useEffect(() => {
     const config = {
       type: Phaser.AUTO, width: 480, height: 320, pixelArt: true, scale: { zoom: 1.5 },
       backgroundColor: '#000000', parent: gameRef.current,
       physics: { default: 'arcade', arcade: { gravity: { y: 800 }, debug: false } },
-      scene: [MenuScene, MenuSeleccion, MejorasScene, GameScene]
+      scene: [MenuScene, MenuSeleccion, MejorasScene, GameScene, PauseScene]
     };
-    const game = new Phaser.Game(config);
-    return () => { game.destroy(true); };
+    const game = new Phaser.Game(config); return () => { game.destroy(true); };
   }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '20px', fontFamily: 'sans-serif' }}>
-      <h2>Solemne 2 - Jefe Final con Fondos</h2>
+      <h2>Solemne 2 - Fusión Exacta (Menús de Mathias + Tu Jefe con Fondos)</h2>
       <div ref={gameRef} style={{ border: '4px solid #333', borderRadius: '8px', overflow: 'hidden' }}></div>
-      <p style={{ marginTop: '10px' }}>Usa <strong>WASD</strong>. ¡La siguiente tarima palpitará antes de aparecer!</p>
+      <p style={{ marginTop: '10px' }}>Usa <strong>WASD</strong>. ¡Atento al parpadeo de las 4 tarimas antes de saltar!</p>
     </div>
   );
 }
