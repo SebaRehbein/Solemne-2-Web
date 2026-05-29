@@ -357,9 +357,9 @@ class MejorasScene extends Phaser.Scene {
       btnDano.setText(`[+] DAÑO (${est.mejorasDano}/5): ${est.danoActual} ATK`);
       
       let textoMovilidad = `[+] MOVILIDAD (${est.mejorasMovilidad}/3)`;
-      if (est.mejorasMovilidad === 0) textoMovilidad += " -> Siguiente: Salto en Pared";
-      else if (est.mejorasMovilidad === 1) textoMovilidad += " -> Siguiente: Tercer Salto";
-      else if (est.mejorasMovilidad === 2) textoMovilidad += " -> Siguiente: Dash (Shift)";
+      if (est.mejorasMovilidad === 0) textoMovilidad += ": Salto en Pared";
+      else if (est.mejorasMovilidad === 1) textoMovilidad += ": Tercer Salto";
+      else if (est.mejorasMovilidad === 2) textoMovilidad += ": Dash (Shift)";
       else textoMovilidad += " (AL MÁXIMO)";
       
       btnMovilidad.setText(textoMovilidad);
@@ -498,7 +498,7 @@ class GameScene extends Phaser.Scene {
     this.boss.setCollideWorldBounds(true);
     this.boss.setBounce(1); 
     
-    this.bossHealth = 2500; 
+    this.bossHealth = 25; 
     this.bossPhase = 1;     
     this.physics.add.collider(this.boss, capaMarco);
     this.physics.add.collider(this.boss, capaTerreno);
