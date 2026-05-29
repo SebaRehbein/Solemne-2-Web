@@ -33,13 +33,21 @@ class SistemaNiveles {
   get danoActual() { return this.danoBase + (this.mejorasDano * 15); }
 
   ganarExperiencia(cantidad) {
+    if (this.nivel >= 13) return; // Evita seguir ganando exp si ya es nivel máximo
+
     this.exp += cantidad;
     let expNecesaria = (this.nivel + 1) * 100; 
     
-    while (this.exp >= expNecesaria) {
+    while (this.exp >= expNecesaria && this.nivel < 13) {
       this.exp -= expNecesaria;
       this.nivel++;
       this.puntosDisponibles++;
+      
+      if (this.nivel >= 13) {
+        this.exp = 0; // Resetea la exp extra al llegar al máximo
+        break;
+      }
+      
       expNecesaria = (this.nivel + 1) * 100;
     }
   }
@@ -288,9 +296,11 @@ class MenuSeleccion extends Phaser.Scene {
       const stats = gestor.obtenerEstadisticasDe(char.id);
       
       this.add.sprite(char.x, 120, `${char.id}_idle`).play(`${char.id}_idle`).setScale(2);
-      this.add.text(char.x, 170, `${char.id}\n(Nvl ${stats.nivel})`, { fontSize: '18px', fill: '#ffffff', align:'center' }).setOrigin(0.5);
       
-      // Botón de Jugar (Sin fondo, con contorno)
+      // Mostrar MAX si es nivel 13 o superior
+      const textoNivel = stats.nivel >= 13 ? 'MAX' : stats.nivel;
+      this.add.text(char.x, 170, `${char.id}\n(Nvl ${textoNivel})`, { fontSize: '18px', fill: '#ffffff', align:'center' }).setOrigin(0.5);
+      
       const btnJugar = this.add.text(char.x, 215, '▶ JUGAR', { 
         fontSize: '16px', 
         fill: '#00ff00', 
@@ -301,8 +311,7 @@ class MenuSeleccion extends Phaser.Scene {
       
       btnJugar.on('pointerdown', () => { this.scene.start('GameScene', { personaje: char.id }); });
 
-      // Botón de Mejorar (Sin fondo, con contorno)
-      const btnMejorar = this.add.text(char.x, 250, '⭐ MEJORAR', { 
+      const btnMejorar = this.add.text(char.x, 250, '⭐ MEJORAS', { 
         fontSize: '14px', 
         fill: '#ffff00', 
         fontStyle: 'bold',
@@ -310,7 +319,7 @@ class MenuSeleccion extends Phaser.Scene {
         strokeThickness: 3 
       }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
       
-      if(stats.puntosDisponibles > 0) btnMejorar.setText(`⭐ MEJORAR (${stats.puntosDisponibles})`);
+      if(stats.puntosDisponibles > 0) btnMejorar.setText(`⭐ MEJORAS (+${stats.puntosDisponibles})`);
       
       btnMejorar.on('pointerdown', () => { this.scene.start('MejorasScene', { personaje: char.id }); });
 
