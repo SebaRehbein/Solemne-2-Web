@@ -43,3 +43,17 @@
 **Estado:**
 * Completado: 
 * Pendiente:
+
+## MEJORAS
+* [ ] implementar nivel principal antes de llegar al jefe.
+* [ ] implementar nivel jefe.
+* [ ] crear habilidad especial para SHURI.
+* [ ] crear habilidad especial para TYSON.
+* [ ] crear habilidad especial para FROG.
+* [ ] cambiar nombre de FROG.
+* [ ] crear skin y animaciones para el jefe.
+* [ ] diseñar barra de vida para el jefe.
+* [ ] eliminar mensajes emergentes desde buscador e implementarlos dentro del juego.
+* [ ] crear assets para titulos y botones.
+* [ ] mejorar e implementar bien las mecanicas de movilidad.
+* [ ] implementar intruccion sobre el juego al pie de la pantalla.
