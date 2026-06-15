@@ -1,5 +1,7 @@
 # PLANNING.md - Planificación Semanal y Avances
 
+# FASE 1
+
 ## Semana 1 (29 de Abril - 05 de Mayo): Diseño y Setup Inicial
 **Tareas Planificadas:**
 * [x] Enviar correo a cristhian.aguilera@uss.cl con los nombres de los integrantes y el link al repositorio en GitHub.
@@ -7,8 +9,7 @@
 * [x] Inicializar el proyecto base con el framework React y el gestor de paquetes `pnpm`.
 
 **Estado:**
-* Completado: COMPLETADO
-* Pendiente: 
+* Completado
 
 ## Semana 2 (06 de Mayo - 12 de Mayo): DevOps, Creación de Recursos y Motor Base
 **Tareas Planificadas:**
@@ -19,18 +20,16 @@
 * [x] Enlazar el personaje al mapa: implementar colisiones con el entorno y las primeras trampas.
 
 **Estado:**
-* Completado: Completado
-* Pendiente: diseñar mapas
+* Completado
 
 ## Semana 3 (13 de Mayo - 19 de Mayo): Clases, Jefes y Testing
 **Tareas Planificadas:**
-* [ ] Implementar el sistema de clases (Luchador, Tanque, Mago) y aplicarlo al personaje base.
+* [x] Implementar el sistema de clases (Luchador, Tanque, Mago) y aplicarlo al personaje base.
 * [x] Programar la lógica del Jefe 1 (temática a ver pronto) y su mecánica especial de combate.
 * [ ] Escribir e implementar las pruebas unitarias requeridas para la lógica del juego.
 
 **Estado:**
-* Completado: 
-* Pendiente: pruebas unitarias, clases creadas pero no aplicadas
+* Pendiente: pruebas unitarias
 
 ## Semana 4 (20 de Mayo - 27 de Mayo): Dockerización y Entrega Final
 **Tareas Planificadas:**
@@ -41,7 +40,6 @@
 * [ ] Realizar la revisión final asegurando que la última versión esté subida al repositorio de GitHub al cierre del día 28 de mayo de 2026.
 
 **Estado:**
-* Completado: 
 * Pendiente:
 
 ## MEJORAS
@@ -57,3 +55,5 @@
 * [ ] crear assets para titulos y botones.
 * [ ] mejorar e implementar bien las mecanicas de movilidad.
 * [ ] implementar intruccion sobre el juego al pie de la pantalla.
+
+# FASE 2
