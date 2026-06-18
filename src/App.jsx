@@ -2,89 +2,153 @@ import { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 
 // ==============================================================================
-// 1. SISTEMA DE PROGRESIÓN Y ESTADÍSTICAS (De Mathias)
+// 1. SISTEMA DE PROGRESIÓN Y ESTADÍSTICAS
 // ==============================================================================
 class SistemaNiveles {
   constructor(nombrePersonaje) {
     this.nombre = nombrePersonaje;
-    this.nivel = 0;
+    this.nivel = 0;              // Empieza en Nivel 0
     this.exp = 0;
-    this.puntosDisponibles = 3; // <--- Exactamente 3 puntos iniciales
+    this.puntosDisponibles = 0;  // Empieza sin puntos regalados
+    
+    // Stats Base
     this.vidaBase = 100;
     this.danoBase = 25;
-    this.mejorasVida = 0;       
-    this.mejorasDano = 0;       
-    this.mejorasMovilidad = 0;  
-    this.mecanicasMovilidad = { nivel1: false, nivel2: false, nivel3: false };
+    
+    // Contadores (Límites)
+    this.mejorasVida = 0;       // Max 5
+    this.mejorasDano = 0;       // Max 5
+    this.mejorasMovilidad = 0;  // Max 3
+    
+    // Mecánicas desbloqueables de movilidad
+    this.mecanicasMovilidad = {
+      nivel1: false, // Salto en pared
+      nivel2: false, // Tercer salto
+      nivel3: false  // Dash
+    };
   }
 
   get vidaMaxima() { return this.vidaBase + (this.mejorasVida * 20); }
   get danoActual() { return this.danoBase + (this.mejorasDano * 15); }
 
   ganarExperiencia(cantidad) {
-    if (this.nivel >= 13) return; 
+    if (this.nivel >= 13) return; // Evita seguir ganando exp si ya es nivel máximo
     this.exp += parseInt(cantidad);
     let expNecesaria = (this.nivel + 1) * 100; 
+    
     while (this.exp >= expNecesaria && this.nivel < 13) {
       this.exp -= expNecesaria;
       this.nivel++;
-      this.puntosDisponibles++;
-      if (this.nivel >= 13) { this.exp = 0; break; }
+      this.puntosDisponibles++; // Ganan 1 punto por cada nivel subido
+      
+      if (this.nivel >= 13) {
+        this.exp = 0; // Resetea la exp extra al llegar al máximo
+        break;
+      }
       expNecesaria = (this.nivel + 1) * 100;
     }
   }
 
-  mejorarVida() { if (this.puntosDisponibles > 0 && this.mejorasVida < 5) { this.mejorasVida++; this.puntosDisponibles--; return true; } return false; }
-  mejorarDano() { if (this.puntosDisponibles > 0 && this.mejorasDano < 5) { this.mejorasDano++; this.puntosDisponibles--; return true; } return false; }
+  mejorarVida() {
+    if (this.puntosDisponibles > 0 && this.mejorasVida < 5) {
+      this.mejorasVida++;
+      this.puntosDisponibles--;
+      return true;
+    }
+    return false;
+  }
+
+  mejorarDano() {
+    if (this.puntosDisponibles > 0 && this.mejorasDano < 5) {
+      this.mejorasDano++;
+      this.puntosDisponibles--;
+      return true;
+    }
+    return false;
+  }
+
   mejorarMovilidad() {
     if (this.puntosDisponibles > 0 && this.mejorasMovilidad < 3) {
-      this.mejorasMovilidad++; this.puntosDisponibles--;
+      this.mejorasMovilidad++;
+      this.puntosDisponibles--;
       if (this.mejorasMovilidad >= 1) this.mecanicasMovilidad.nivel1 = true;
       if (this.mejorasMovilidad >= 2) this.mecanicasMovilidad.nivel2 = true;
       if (this.mejorasMovilidad >= 3) this.mecanicasMovilidad.nivel3 = true;
       return true;
-    } return false;
+    }
+    return false;
   }
 
   obtenerDatosParaGuardar() {
-    return { nivel: this.nivel, exp: this.exp, puntosDisponibles: this.puntosDisponibles, mejorasVida: this.mejorasVida, mejorasDano: this.mejorasDano, mejorasMovilidad: this.mejorasMovilidad, mecanicasMovilidad: this.mecanicasMovilidad };
+    return {
+      nivel: this.nivel,
+      exp: this.exp,
+      puntosDisponibles: this.puntosDisponibles,
+      mejorasVida: this.mejorasVida,
+      mejorasDano: this.mejorasDano,
+      mejorasMovilidad: this.mejorasMovilidad,
+      mecanicasMovilidad: this.mecanicasMovilidad
+    };
   }
 
   cargarDatosGuardados(datos) {
     if (!datos) return;
-    this.nivel = datos.nivel || 0; this.exp = datos.exp || 0; this.puntosDisponibles = datos.puntosDisponibles || 0;
-    this.mejorasVida = datos.mejorasVida || 0; this.mejorasDano = datos.mejorasDano || 0; this.mejorasMovilidad = datos.mejorasMovilidad || 0;
+    this.nivel = datos.nivel || 0;
+    this.exp = datos.exp || 0;
+    this.puntosDisponibles = datos.puntosDisponibles || 0;
+    this.mejorasVida = datos.mejorasVida || 0;
+    this.mejorasDano = datos.mejorasDano || 0;
+    this.mejorasMovilidad = datos.mejorasMovilidad || 0;
     this.mecanicasMovilidad = datos.mecanicasMovilidad || { nivel1: false, nivel2: false, nivel3: false };
   }
 }
 
 class GestorProgreso {
   constructor() {
-    this.personajes = { Shuri: new SistemaNiveles('Shuri'), Frog: new SistemaNiveles('Frog'), Tyson: new SistemaNiveles('Tyson') };
+    this.personajes = {
+      Shuri: new SistemaNiveles('Shuri'),
+      Frog: new SistemaNiveles('Frog'),
+      Tyson: new SistemaNiveles('Tyson')
+    };
     this.cargarProgreso();
   }
-  obtenerEstadisticasDe(nombrePersonaje) { return this.personajes[nombrePersonaje]; }
+  obtenerEstadisticasDe(nombrePersonaje) {
+    return this.personajes[nombrePersonaje];
+  }
   guardarProgreso() {
-    localStorage.setItem('progreso_personajes_v10', JSON.stringify({ Shuri: this.personajes.Shuri.obtenerDatosParaGuardar(), Frog: this.personajes.Frog.obtenerDatosParaGuardar(), Tyson: this.personajes.Tyson.obtenerDatosParaGuardar() }));
+    const datosJuego = {
+      Shuri: this.personajes.Shuri.obtenerDatosParaGuardar(),
+      Frog: this.personajes.Frog.obtenerDatosParaGuardar(),
+      Tyson: this.personajes.Tyson.obtenerDatosParaGuardar()
+    };
+    localStorage.setItem('progreso_personajes_v3', JSON.stringify(datosJuego));
   }
   cargarProgreso() {
-    const datosGuardados = localStorage.getItem('progreso_personajes_v10');
+    const datosGuardados = localStorage.getItem('progreso_personajes_v3');
     if (datosGuardados) {
-      const dp = JSON.parse(datosGuardados);
-      this.personajes.Shuri.cargarDatosGuardados(dp.Shuri); this.personajes.Frog.cargarDatosGuardados(dp.Frog); this.personajes.Tyson.cargarDatosGuardados(dp.Tyson);
+      const datosParseados = JSON.parse(datosGuardados);
+      this.personajes.Shuri.cargarDatosGuardados(datosParseados.Shuri);
+      this.personajes.Frog.cargarDatosGuardados(datosParseados.Frog);
+      this.personajes.Tyson.cargarDatosGuardados(datosParseados.Tyson);
     }
   }
 }
 
 // ==============================================================================
-// 2. CLASES DE PERSONAJES (TU CÓDIGO)
+// 2. SISTEMA DE CLASES DE PERSONAJES (OOP)
 // ==============================================================================
 class PersonajeBase extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, textura) {
     super(scene, x, y, textura);
-    scene.add.existing(this); scene.physics.add.existing(this);
-    this.setBounce(0); this.setCollideWorldBounds(true); this.jumpCount = 0;
-    this.velocidadX = 200; this.fuerzaSalto = -300; this.fuerzaDobleSalto = -250;
+    scene.add.existing(this);
+    scene.physics.add.existing(this);
+    this.setBounce(0);
+    this.setCollideWorldBounds(true);
+    this.jumpCount = 0;
+    
+    this.velocidadX = 200;
+    this.fuerzaSalto = -300;
+    this.fuerzaDobleSalto = -250;
   }
 }
 class Shuri extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y, 'Shuri_idle'); } }
@@ -92,26 +156,103 @@ class Tyson extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y
 class Frog extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y, 'Frog_idle'); } }
 
 // ==============================================================================
-// MENÚ PRINCIPAL Y SELECCIÓN (SIN IMÁGENES DE FONDO)
+// ESCENA 1: MENÚ PRINCIPAL
 // ==============================================================================
 class MenuScene extends Phaser.Scene {
   constructor() { super({ key: 'MenuScene' }); }
+  preload() {
+    this.load.image('tiles-terrain', 'assets/Terrain (16x16).png');
+    this.load.tilemapTiledJSON('mapa-menu', 'assets/menu.tmj'); 
+  }
   
   create() {
-    if (!this.registry.has('gestorProgreso')) this.registry.set('gestorProgreso', new GestorProgreso());
-    this.cameras.main.setBackgroundColor('#87CEEB'); // Fondo celeste sólido
+    if (!this.registry.has('gestorProgreso')) {
+      this.registry.set('gestorProgreso', new GestorProgreso());
+    }
+    this.cameras.main.setBackgroundColor('#87CEEB'); 
 
-    const controlesPorDefecto = { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
-    if (!localStorage.getItem('controlesJuego')) localStorage.setItem('controlesJuego', JSON.stringify(controlesPorDefecto));
-    this.registry.set('controles', JSON.parse(localStorage.getItem('controlesJuego')));
+    const map = this.make.tilemap({ key: 'mapa-menu' });
+    const tileset = map.addTilesetImage('terrain', 'tiles-terrain');
+    map.createLayer('Capa de patrones 1', tileset, 0, 0);
+    map.createLayer('Capa de patrones 2', tileset, 0, 0);
+    map.createLayer('Capa de patrones 3', tileset, 0, 0);
 
-    this.add.text(240, 90, "Berry Bad Luck", { fontSize: '48px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 }).setOrigin(0.5);
+    const controlesGuardados = localStorage.getItem('controlesJuego');
+    if (controlesGuardados) {
+      this.registry.set('controles', JSON.parse(controlesGuardados));
+    } else if (!this.registry.has('controles')) {
+      const controlesPorDefecto = { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
+      this.registry.set('controles', controlesPorDefecto);
+      localStorage.setItem('controlesJuego', JSON.stringify(controlesPorDefecto));
+    }
+
+    const titleText = this.add.text(240, 70, "Berry Bad Luck", { fontSize: '48px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 }).setOrigin(0.5);
     const btnPlay = this.add.text(240, 150, 'JUGAR', { fontSize: '40px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnPlay.on('pointerdown', () => { this.scene.start('MenuSeleccion'); });
-    btnPlay.on('pointerover', () => btnPlay.setScale(1.2)); btnPlay.on('pointerout', () => btnPlay.setScale(1));
+    const btnOptions = this.add.text(240, 220, 'OPCIONES', { fontSize: '32px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    
+    [btnPlay, btnOptions].forEach(btn => {
+      btn.on('pointerover', () => btn.setScale(1.2));
+      btn.on('pointerout', () => btn.setScale(1));
+    });
+
+    const overlayBg = this.add.rectangle(240, 160, 480, 320, 0x000000, 0.85).setInteractive(); 
+    const subTitle = this.add.text(240, 35, 'CONFIGURAR CONTROLES', { fontSize: '22px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(0.5);
+    const infoText = this.add.text(240, 65, 'Haz clic en una acción para cambiar su tecla', { fontSize: '12px', fill: '#aaaaaa' }).setOrigin(0.5);
+    const ctrl = this.registry.get('controles');
+    
+    const btnArriba = this.add.text(240, 105, `Salto / Arriba: ${ctrl.ARRIBA}`, { fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const btnIzquierda = this.add.text(240, 145, `Izquierda: ${ctrl.IZQUIERDA}`, { fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const btnAbajo = this.add.text(240, 185, `Abajo: ${ctrl.ABAJO}`, { fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const btnDerecha = this.add.text(240, 225, `Derecha: ${ctrl.DERECHA}`, { fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const btnBack = this.add.text(240, 280, 'VOLVER', { fontSize: '24px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    
+    const optionsContainer = this.add.container(0, 0, [ overlayBg, subTitle, infoText, btnArriba, btnIzquierda, btnAbajo, btnDerecha, btnBack ]);
+    optionsContainer.setDepth(10).setVisible(false); 
+    
+    let esperandoTecla = false;
+    const iniciarRebind = (btnComponent, campoControl, textoBase) => {
+      if (esperandoTecla) return;
+      esperandoTecla = true;
+      btnComponent.setText(`${textoBase}: [ PRESIONA UNA TECLA... ]`).setFill('#ffcc00');
+      this.input.keyboard.once('keydown', (event) => {
+        let keyName = event.key.toUpperCase();
+        if (keyName === 'ARROWUP') keyName = 'UP'; if (keyName === 'ARROWDOWN') keyName = 'DOWN';
+        if (keyName === 'ARROWLEFT') keyName = 'LEFT'; if (keyName === 'ARROWRIGHT') keyName = 'RIGHT';
+        if (keyName === ' ') keyName = 'SPACE';
+        if (Phaser.Input.Keyboard.KeyCodes[keyName] !== undefined) {
+          const controlesActuales = this.registry.get('controles');
+          controlesActuales[campoControl] = keyName;
+          this.registry.set('controles', controlesActuales);
+          localStorage.setItem('controlesJuego', JSON.stringify(controlesActuales));
+          btnComponent.setText(`${textoBase}: ${keyName}`);
+        }
+        btnComponent.setFill('#ffffff');
+        esperandoTecla = false;
+      });
+    };
+
+    btnArriba.on('pointerdown', () => iniciarRebind(btnArriba, 'ARRIBA', 'Salto / Arriba'));
+    btnIzquierda.on('pointerdown', () => iniciarRebind(btnIzquierda, 'IZQUIERDA', 'Izquierda'));
+    btnAbajo.on('pointerdown', () => iniciarRebind(btnAbajo, 'ABAJO', 'Abajo'));
+    btnDerecha.on('pointerdown', () => iniciarRebind(btnDerecha, 'DERECHA', 'Derecha'));
+    
+    btnOptions.on('pointerdown', () => {
+      if (esperandoTecla) return;
+      titleText.setVisible(false); btnPlay.setVisible(false); btnOptions.setVisible(false);
+      optionsContainer.setVisible(true);
+    });
+    btnBack.on('pointerdown', () => {
+      if (esperandoTecla) return;
+      optionsContainer.setVisible(false);
+      titleText.setVisible(true); btnPlay.setVisible(true); btnOptions.setVisible(true);
+    });
   }
 }
 
+// ==============================================================================
+// ESCENA 2: PANTALLA DE SELECCIÓN
+// ==============================================================================
 class MenuSeleccion extends Phaser.Scene {
   constructor() { super({ key: 'MenuSeleccion' }); }
   preload() {
@@ -120,57 +261,88 @@ class MenuSeleccion extends Phaser.Scene {
     this.load.spritesheet('Frog_idle', 'assets/animaciones/Main_Characters/Frog/Idle (32x32).png', { frameWidth: 32, frameHeight: 32 });
   }
   create() {
-    this.cameras.main.setBackgroundColor('#87CEEB'); // Fondo celeste sólido
+    this.cameras.main.setBackgroundColor('#87CEEB'); 
     const gestor = this.registry.get('gestorProgreso');
     this.add.text(240, 30, 'Elige tu personaje:', { fontSize: '24px', fill: '#ffff00', fontStyle:'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
 
     ['Shuri', 'Tyson', 'Frog'].forEach(char => {
-      if (!this.anims.exists(`${char}_idle`)) this.anims.create({ key: `${char}_idle`, frames: this.anims.generateFrameNumbers(`${char}_idle`), frameRate: 10, repeat: -1 });
+      if (!this.anims.exists(`${char}_idle`)) {
+        this.anims.create({ key: `${char}_idle`, frames: this.anims.generateFrameNumbers(`${char}_idle`), frameRate: 10, repeat: -1 });
+      }
     });
 
-    [{ id: 'Shuri', x: 100 }, { id: 'Tyson', x: 240 }, { id: 'Frog', x: 380 }].forEach(char => {
+    const chars = [
+      { id: 'Shuri', x: 100 },
+      { id: 'Tyson', x: 240 },
+      { id: 'Frog', x: 380 }
+    ];
+    
+    chars.forEach(char => {
       const stats = gestor.obtenerEstadisticasDe(char.id);
-      this.add.sprite(char.x, 120, `${char.id}_idle`).play(`${char.id}_idle`).setScale(2);
-      this.add.text(char.x, 170, `${char.id}\n(Nvl ${stats.nivel >= 13 ? 'MAX' : stats.nivel})`, { fontSize: '18px', fill: '#ffffff', align:'center', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
       
-      const btnJugar = this.add.text(char.x, 215, '▶ JUGAR', { fontSize: '16px', fill: '#00ff00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
+      this.add.sprite(char.x, 120, `${char.id}_idle`).play(`${char.id}_idle`).setScale(2);
+      
+      const textoNivel = stats.nivel >= 13 ? 'MAX' : stats.nivel;
+      this.add.text(char.x, 170, `${char.id}\n(Nvl ${textoNivel})`, { fontSize: '18px', fill: '#ffffff', align:'center', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
+      
+      const btnJugar = this.add.text(char.x, 215, '▶ JUGAR', { 
+        fontSize: '16px', fill: '#00ff00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 
+      }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
+      
       btnJugar.on('pointerdown', () => { this.scene.start('GameScene', { personaje: char.id }); });
 
-      const btnMejorar = this.add.text(char.x, 250, '⭐ MEJORAS', { fontSize: '14px', fill: '#ffff00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
+      const btnMejorar = this.add.text(char.x, 250, '⭐ MEJORAS', { 
+        fontSize: '14px', fill: '#ffff00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 
+      }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
+      
       if(stats.puntosDisponibles > 0) btnMejorar.setText(`⭐ MEJORAS (+${stats.puntosDisponibles})`);
+      
       btnMejorar.on('pointerdown', () => { this.scene.start('MejorasScene', { personaje: char.id }); });
 
-      [btnJugar, btnMejorar].forEach(btn => { btn.on('pointerover', () => btn.setScale(1.1)); btn.on('pointerout', () => btn.setScale(1)); });
+      [btnJugar, btnMejorar].forEach(btn => {
+        btn.on('pointerover', () => btn.setScale(1.1));
+        btn.on('pointerout', () => btn.setScale(1));
+      });
     });
-    this.add.text(240, 295, 'Volver al Inicio', { fontSize: '16px', fill: '#ff0000', fontStyle:'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.scene.start('MenuScene'); });
+    
+    const btnSalir = this.add.text(240, 295, 'Volver al Inicio', { fontSize: '16px', fill: '#ff0000', fontStyle:'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    btnSalir.on('pointerdown', () => { this.scene.start('MenuScene'); });
   }
 }
 
+// ==============================================================================
+// ESCENA 3: MENÚ DE MEJORAS
+// ==============================================================================
 class MejorasScene extends Phaser.Scene {
   constructor() { super({ key: 'MejorasScene' }); }
+  
   init(data) { this.personaje = data.personaje; }
   create() {
-    this.cameras.main.setBackgroundColor('#87CEEB'); // Fondo celeste sólido
+    const gestor = this.registry.get('gestorProgreso');
+    const est = gestor.obtenerEstadisticasDe(this.personaje);
+    
+    this.cameras.main.setBackgroundColor('#87CEEB');
     this.add.rectangle(240, 160, 480, 320, 0x000000, 0.7);
 
-    const gestor = this.registry.get('gestorProgreso'); const est = gestor.obtenerEstadisticasDe(this.personaje);
     this.add.text(240, 30, `Mejoras: ${this.personaje}`, { fontSize: '28px', fill: '#ffcc00', fontStyle:'bold' }).setOrigin(0.5);
     const txtPuntos = this.add.text(240, 60, `Puntos Disponibles: ${est.puntosDisponibles}`, { fontSize: '18px', fill: '#ffffff' }).setOrigin(0.5);
 
     const btnVida = this.add.text(240, 110, '', { fontSize: '18px', fill: '#ff8888', backgroundColor:'#330000' }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
     const btnDano = this.add.text(240, 150, '', { fontSize: '18px', fill: '#88ff88', backgroundColor:'#003300' }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
     const btnMovilidad = this.add.text(240, 190, '', { fontSize: '18px', fill: '#8888ff', backgroundColor:'#000033' }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
-
+    
     const actualizarTextos = () => {
       txtPuntos.setText(`Puntos Disponibles: ${est.puntosDisponibles}`);
       btnVida.setText(`[+] VIDA (${est.mejorasVida}/5): ${est.vidaMaxima} PV`);
       btnDano.setText(`[+] DAÑO (${est.mejorasDano}/5): ${est.danoActual} ATK`);
-      let txtMov = `[+] MOVILIDAD (${est.mejorasMovilidad}/3)`;
-      if(est.mejorasMovilidad === 0) txtMov += ": Salto Pared";
-      else if(est.mejorasMovilidad === 1) txtMov += ": Triple Salto";
-      else if(est.mejorasMovilidad === 2) txtMov += ": Dash (Shift)";
-      else txtMov += " (AL MÁXIMO)";
-      btnMovilidad.setText(txtMov);
+      
+      let textoMovilidad = `[+] MOVILIDAD (${est.mejorasMovilidad}/3)`;
+      if (est.mejorasMovilidad === 0) textoMovilidad += ": Salto en Pared";
+      else if (est.mejorasMovilidad === 1) textoMovilidad += ": Tercer Salto";
+      else if (est.mejorasMovilidad === 2) textoMovilidad += ": Dash (Shift)";
+      else textoMovilidad += " (AL MÁXIMO)";
+      
+      btnMovilidad.setText(textoMovilidad);
     };
 
     btnVida.on('pointerdown', () => { if(est.mejorarVida()) { gestor.guardarProgreso(); actualizarTextos(); } });
@@ -178,17 +350,21 @@ class MejorasScene extends Phaser.Scene {
     btnMovilidad.on('pointerdown', () => { if(est.mejorarMovilidad()) { gestor.guardarProgreso(); actualizarTextos(); } });
 
     actualizarTextos();
-    this.add.text(240, 270, 'VOLVER', { fontSize: '20px', fill: '#ffffff', fontStyle:'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.scene.start('MenuSeleccion'); });
+    
+    const btnVolver = this.add.text(240, 270, 'VOLVER', { fontSize: '20px', fill: '#ffffff', fontStyle:'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    btnVolver.on('pointerdown', () => { this.scene.start('MenuSeleccion'); });
   }
 }
 
 // ==============================================================================
-// ESCENA 4: EL MAPA DEL JEFE FINAL (COLORES SÓLIDOS Y MENÚ DE ESCAPE)
+// ESCENA 4: EL JUEGO PRINCIPAL (MAPA DEL JEFE FUSIONADO CON TUS ESTADÍSTICAS)
 // ==============================================================================
 class GameScene extends Phaser.Scene {
   constructor() { super({ key: 'GameScene' }); }
 
-  init(data) { this.personajeSeleccionado = data.personaje || 'Shuri'; }
+  init(data) {
+    this.personajeSeleccionado = data.personaje || 'Shuri';
+  }
 
   preload() {
     const char = this.personajeSeleccionado;
@@ -197,10 +373,11 @@ class GameScene extends Phaser.Scene {
     this.load.spritesheet(`${char}_jump`, `assets/animaciones/Main_Characters/${char}/Jump (32x32).png`, { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet(`${char}_fall`, `assets/animaciones/Main_Characters/${char}/Fall (32x32).png`, { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet(`${char}_double-jump`, `assets/animaciones/Main_Characters/${char}/Double Jump (32x32).png`, { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_wall-jump`, `assets/animaciones/Main_Characters/${char}/Wall Jump (32x32).png`, { frameWidth: 32, frameHeight: 32 });
 
+    // CARGAMOS EL MAPA DEL COMPAÑERO
     this.load.image('tiles-terrain', 'assets/Terrain (16x16).png');
     this.load.image('tiles-lava', 'assets/MAGAMA.png'); 
-    
     this.load.tilemapTiledJSON('mapa-jefe', 'assets/mapa_jefe/mapa_jefe.tmj');
   }
 
@@ -208,11 +385,9 @@ class GameScene extends Phaser.Scene {
     this.gestor = this.registry.get('gestorProgreso');
     this.estadisticas = this.gestor.obtenerEstadisticasDe(this.personajeSeleccionado);
 
-    // ==========================================
-    // FONDO CELESTE INICIAL
-    // ==========================================
     this.cameras.main.setBackgroundColor('#87CEEB'); 
-
+    
+    // TEXTO DE ADVERTENCIA DEL JEFE
     this.warningText = this.add.text(240, 40, '', {
         fontSize: '18px', fill: '#ffffff', backgroundColor: 'rgba(0,0,0,0.8)',
         fontStyle: 'bold', align: 'center', padding: { x: 10, y: 5 }
@@ -225,17 +400,17 @@ class GameScene extends Phaser.Scene {
       tsTerreno = map.addTilesetImage('Terrain (16x16)', 'tiles-terrain');
       tsLava = map.addTilesetImage('MAGAMA', 'tiles-lava');
     } catch(e) {
-      console.warn("Usando nombres alternativos para los tilesets:", e.message); 
+      console.warn("Usando nombres alternativos para los tilesets"); 
       tsTerreno = map.addTilesetImage('terrain', 'tiles-terrain');
       tsLava = map.addTilesetImage('lava', 'tiles-lava');
     }
+    
     const combinacionTiles = [tsTerreno, tsLava].filter(t => t);
-
     const capaLava = map.getLayer('lava') ? map.createLayer('lava', combinacionTiles, 0, 0).setVisible(true) : null;
     const capaTerreno = map.getLayer('terreno') ? map.createLayer('terreno', combinacionTiles, 0, 0).setVisible(true) : null;
     const capaPisoFalso1 = map.getLayer('piso_falso_1') ? map.createLayer('piso_falso_1', combinacionTiles, 0, 0).setVisible(true) : null;
     const capaPisoFalso2 = map.getLayer('piso_falso_2') ? map.createLayer('piso_falso_2', combinacionTiles, 0, 0).setVisible(true) : null;
-
+    
     if(capaTerreno) capaTerreno.setCollisionByExclusion([-1]);
     if(capaPisoFalso1) capaPisoFalso1.setCollisionByExclusion([-1]);
     if(capaPisoFalso2) capaPisoFalso2.setCollisionByExclusion([-1]);
@@ -250,23 +425,27 @@ class GameScene extends Phaser.Scene {
             this.tarimas.push(capaTarima);
         }
     }
-
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
-    // JUGADOR Y BARRA DE VIDA NUEVA
+    // JUGADOR Y BARRA DE VIDA
     this.playerHealth = this.estadisticas.vidaMaxima;
     this.maxHealth = this.estadisticas.vidaMaxima;
-    
+
     const barX = 10, barY = 10, barWidth = 150, barHeight = 15;
-    this.healthBg = this.add.graphics().setScrollFactor(0).fillStyle(0x000000, 0.6).fillRect(barX, barY, barWidth, barHeight).lineStyle(1, 0xffffff, 1).strokeRect(barX, barY, barWidth, barHeight);
+    this.healthBg = this.add.graphics().setScrollFactor(0);
+    this.healthBg.fillStyle(0x000000, 0.6).fillRect(barX, barY, barWidth, barHeight);
+    this.healthBg.lineStyle(1, 0xffffff, 1).strokeRect(barX, barY, barWidth, barHeight);
     this.healthBar = this.add.graphics().setScrollFactor(0);
-    this.healthText = this.add.text(barX + barWidth / 2, barY + barHeight / 2, '', { fontSize: '11px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setScrollFactor(0);
-    
+    this.healthText = this.add.text(barX + barWidth / 2, barY + barHeight / 2, '', {
+      fontSize: '11px', fill: '#ffffff', fontStyle: 'bold', fontFamily: 'Arial'
+    }).setOrigin(0.5).setScrollFactor(0);
+
     this.updateHealthBar = () => {
       this.healthBar.clear();
       const currentWidth = Math.max(0, (this.playerHealth / this.maxHealth) * barWidth);
       this.healthBar.fillStyle(0xff0000, 1).fillRect(barX, barY, currentWidth, barHeight);
-      this.healthText.setText(`♥ ${Math.max(0, this.playerHealth)} / ${this.maxHealth}`);
+      const vidaMostrada = Math.max(0, this.playerHealth);
+      this.healthText.setText(`♥ ${vidaMostrada} / ${this.maxHealth}`);
     };
     this.updateHealthBar();
 
@@ -276,16 +455,18 @@ class GameScene extends Phaser.Scene {
 
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
-    // 4. COLISIONES
+    // COLISIONES DEL JUGADOR
     if(capaTerreno) this.physics.add.collider(this.player, capaTerreno);
     if(capaPisoFalso1) this.colPiso1 = this.physics.add.collider(this.player, capaPisoFalso1);
     if(capaPisoFalso2) this.colPiso2 = this.physics.add.collider(this.player, capaPisoFalso2);
-
+    
     this.tarimas.forEach(tarima => {
         let col = this.physics.add.collider(this.player, tarima);
-        col.active = false; this.colTarimas.push(col);
+        col.active = false; 
+        this.colTarimas.push(col);
     });
 
+    // LÓGICA DE LA LAVA
     if(capaLava) {
         this.physics.add.collider(this.player, capaLava, () => {
             this.player.setPosition(100, 50);
@@ -300,27 +481,45 @@ class GameScene extends Phaser.Scene {
         });
     }
 
-    const ctrl = this.registry.get('controles') || { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
+    // CONTROLES
+    const configControles = this.registry.get('controles') || { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
     this.teclas = this.input.keyboard.addKeys({
-      W: Phaser.Input.Keyboard.KeyCodes[ctrl.ARRIBA], 
-      A: Phaser.Input.Keyboard.KeyCodes[ctrl.IZQUIERDA],
-      S: Phaser.Input.Keyboard.KeyCodes[ctrl.ABAJO], 
-      D: Phaser.Input.Keyboard.KeyCodes[ctrl.DERECHA]
+      ARRIBA: Phaser.Input.Keyboard.KeyCodes[configControles.ARRIBA],
+      IZQUIERDA: Phaser.Input.Keyboard.KeyCodes[configControles.IZQUIERDA],
+      ABAJO: Phaser.Input.Keyboard.KeyCodes[configControles.ABAJO],
+      DERECHA: Phaser.Input.Keyboard.KeyCodes[configControles.DERECHA],
+      SHIFT: Phaser.Input.Keyboard.KeyCodes.SHIFT
     });
 
+    // ==========================================================
+    // RECREACIÓN OBLIGATORIA DE ANIMACIONES
+    // ==========================================================
     const char = this.personajeSeleccionado;
-    if (!this.anims.exists(`${char}_idle`)) {
-        this.anims.create({ key: `${char}_idle`, frames: this.anims.generateFrameNumbers(`${char}_idle`), frameRate: 10, repeat: -1 });
-        this.anims.create({ key: `${char}_walk`, frames: this.anims.generateFrameNumbers(`${char}_walk`), frameRate: 15, repeat: -1 });
-        this.anims.create({ key: `${char}_jump`, frames: this.anims.generateFrameNumbers(`${char}_jump`), frameRate: 10, repeat: 0 });
-        this.anims.create({ key: `${char}_fall`, frames: this.anims.generateFrameNumbers(`${char}_fall`), frameRate: 10, repeat: -1 });
-        this.anims.create({ key: `${char}_double-jump`, frames: this.anims.generateFrameNumbers(`${char}_double-jump`), frameRate: 15, repeat: 0 });
-    }
+    
+    // Borramos las animaciones previas para evitar falsos positivos en memoria caché
+    const animaciones = ['idle', 'walk', 'jump', 'fall', 'double-jump', 'wall-jump'];
+    animaciones.forEach(anim => {
+        if (this.anims.exists(`${char}_${anim}`)) {
+            this.anims.remove(`${char}_${anim}`);
+        }
+    });
 
-    // 6. DISPAROS JUGADOR
+    // Creamos las animaciones nuevamente forzando su conexión con las texturas recién cargadas
+    this.anims.create({ key: `${char}_idle`, frames: this.anims.generateFrameNumbers(`${char}_idle`), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: `${char}_walk`, frames: this.anims.generateFrameNumbers(`${char}_walk`), frameRate: 15, repeat: -1 });
+    this.anims.create({ key: `${char}_jump`, frames: this.anims.generateFrameNumbers(`${char}_jump`), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: `${char}_fall`, frames: this.anims.generateFrameNumbers(`${char}_fall`), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: `${char}_double-jump`, frames: this.anims.generateFrameNumbers(`${char}_double-jump`), frameRate: 15, repeat: 0 });
+    this.anims.create({ key: `${char}_wall-jump`, frames: this.anims.generateFrameNumbers(`${char}_wall-jump`), frameRate: 15, repeat: -1 });
+    
+    this.isDashing = false;
+
+    // DISPAROS JUGADOR
     const graphics = this.add.graphics();
-    graphics.fillStyle(0x000000, 1).fillCircle(4, 4, 4).fillStyle(0xff0000, 1).fillCircle(4, 4, 2);
-    graphics.generateTexture('balaTextura', 8, 8); graphics.destroy(); 
+    graphics.fillStyle(0x000000, 1).fillCircle(4, 4, 4);
+    graphics.fillStyle(0xff0000, 1).fillCircle(4, 4, 2);
+    graphics.generateTexture('balaTextura', 8, 8);
+    graphics.destroy(); 
 
     this.bullets = this.physics.add.group({ defaultKey: 'balaTextura', maxSize: 20 });
     if(capaTerreno) this.physics.add.collider(this.bullets, capaTerreno, (bala) => bala.destroy());
@@ -328,7 +527,8 @@ class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer) => {
       const bullet = this.bullets.get(this.player.x, this.player.y);
       if (bullet) {
-        bullet.setActive(true).setVisible(true).body.setAllowGravity(false);
+        bullet.setActive(true).setVisible(true);
+        bullet.body.setAllowGravity(false);
         const mouseX = pointer.x + this.cameras.main.scrollX;
         const mouseY = pointer.y + this.cameras.main.scrollY;
         const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, mouseX, mouseY);
@@ -336,19 +536,29 @@ class GameScene extends Phaser.Scene {
       }
     });
 
-    // 7. EL JEFE
+    // ==========================================================
+    // EL JEFE Y SUS FASES 
+    // ==========================================================
     const bossGrafico = this.add.graphics();
     bossGrafico.fillStyle(0x800080, 1).fillRect(0, 0, 40, 40);
-    bossGrafico.generateTexture('bossTextura', 40, 40); bossGrafico.destroy();
+    bossGrafico.generateTexture('bossTextura', 40, 40);
+    bossGrafico.destroy();
 
     this.boss = this.physics.add.sprite(240, 80, 'bossTextura');
-    this.boss.body.setAllowGravity(false); this.boss.setCollideWorldBounds(true); this.boss.setBounce(1); 
-    
+    this.boss.body.setAllowGravity(false);
+    this.boss.setCollideWorldBounds(true);
+    this.boss.setBounce(1); 
+
     this.bossHealth = 6000; 
     this.bossPhase = 1;     
     if(capaTerreno) this.physics.add.collider(this.boss, capaTerreno);
 
-    this.time.addEvent({ delay: 2000, callback: () => { if (this.boss.active) this.boss.setVelocity(Phaser.Math.Between(-150, 150), Phaser.Math.Between(-150, 150)); }, loop: true });
+    this.time.addEvent({
+      delay: 2000, 
+      callback: () => {
+        if (this.boss.active) this.boss.setVelocity(Phaser.Math.Between(-150, 150), Phaser.Math.Between(-150, 150));
+      }, loop: true
+    });
 
     this.bossBullets = this.physics.add.group({ defaultKey: 'balaTextura', maxSize: 80 });
     if(capaTerreno) this.physics.add.collider(this.bossBullets, capaTerreno, (b) => b.destroy());
@@ -359,7 +569,8 @@ class GameScene extends Phaser.Scene {
         if (this.boss && this.boss.active) {
           const bullet = this.bossBullets.get(this.boss.x, this.boss.y);
           if (bullet) {
-            bullet.setActive(true).setVisible(true).body.setAllowGravity(false);
+            bullet.setActive(true).setVisible(true);
+            bullet.body.setAllowGravity(false);
             const randomAngle = Phaser.Math.FloatBetween(0, Math.PI * 2);
             this.physics.velocityFromRotation(randomAngle, 250, bullet.body.velocity);
           }
@@ -367,24 +578,17 @@ class GameScene extends Phaser.Scene {
       }, loop: true
     });
 
-    // ==========================================================
-    // 8. CICLO DE FASES Y SECUENCIA DE TARIMAS (Palpitación Previa)
-    // ==========================================================
     let indiceTarimaActual = 0;
-
     this.time.addEvent({
         delay: 4500, 
         callback: () => {
             if (this.bossPhase === 2 && this.tarimas.length > 0) {
                 let nextIndex = (indiceTarimaActual + 1) % this.tarimas.length;
-
                 this.tarimas[nextIndex].setVisible(true).setAlpha(0.3);
                 this.colTarimas[nextIndex].active = true; 
-
                 let blinkTween = this.tweens.add({
                     targets: this.tarimas[nextIndex], alpha: 0.9, duration: 200, yoyo: true, repeat: 5
                 });
-
                 this.time.delayedCall(1500, () => {
                     if (this.bossPhase !== 2) return; 
                     if(blinkTween) blinkTween.stop();
@@ -400,8 +604,9 @@ class GameScene extends Phaser.Scene {
 
     const iniciarFase1 = () => {
         this.bossPhase = 1; 
-        this.cameras.main.setBackgroundColor('#87CEEB'); // Vuelve a Celeste
-        this.warningText.setVisible(false); this.bossShootTimer.delay = 150; 
+        this.cameras.main.setBackgroundColor('#87CEEB'); 
+        this.warningText.setVisible(false); 
+        this.bossShootTimer.delay = 150; 
         if(capaPisoFalso1) { capaPisoFalso1.setVisible(true); this.colPiso1.active = true; }
         if(capaPisoFalso2) { capaPisoFalso2.setVisible(true); this.colPiso2.active = true; }
         this.tarimas.forEach((t, idx) => { t.setVisible(false); this.colTarimas[idx].active = false; });
@@ -420,8 +625,9 @@ class GameScene extends Phaser.Scene {
 
     const iniciarFase2 = () => {
         this.bossPhase = 2; 
-        this.cameras.main.setBackgroundColor('#ff4444'); // Cambia a Rojo Alerta
-        this.warningText.setVisible(false); this.bossShootTimer.delay = 600; 
+        this.cameras.main.setBackgroundColor('#ff4444'); 
+        this.warningText.setVisible(false); 
+        this.bossShootTimer.delay = 600; 
         if(capaPisoFalso1) { capaPisoFalso1.setVisible(false); this.colPiso1.active = false; }
         if(capaPisoFalso2) { capaPisoFalso2.setVisible(false); this.colPiso2.active = false; }
         if(this.tarimas.length > 0) this.tarimas[0].setAlpha(1); 
@@ -435,8 +641,9 @@ class GameScene extends Phaser.Scene {
 
     const iniciarFase3 = () => {
         this.bossPhase = 3; 
-        this.cameras.main.setBackgroundColor('#87CEEB'); // Vuelve a Celeste
-        this.warningText.setVisible(false); this.bossShootTimer.delay = 300; 
+        this.cameras.main.setBackgroundColor('#87CEEB'); 
+        this.warningText.setVisible(false); 
+        this.bossShootTimer.delay = 300; 
         if(capaPisoFalso1) { capaPisoFalso1.setVisible(false); this.colPiso1.active = false; }
         if(capaPisoFalso2) { capaPisoFalso2.setVisible(true); this.colPiso2.active = true; }
         this.tarimas.forEach((t, idx) => { t.setVisible(false); this.colTarimas[idx].active = false; });
@@ -445,34 +652,40 @@ class GameScene extends Phaser.Scene {
 
     this.time.delayedCall(10000, advertenciaFase2); 
 
-    // DAÑO Y VICTORIA CON ESTADÍSTICAS
+    // DAÑO AL JUGADOR
     this.physics.add.overlap(this.player, this.bossBullets, (player, bullet) => {
-      bullet.destroy(); this.playerHealth -= 10; this.updateHealthBar();
-      player.setTint(0xff0000); this.time.delayedCall(200, () => player.clearTint());
-      if (this.playerHealth <= 0) { 
+      bullet.destroy();
+      this.playerHealth -= 10;
+      this.updateHealthBar();
+      player.setTint(0xff0000);
+      this.time.delayedCall(200, () => player.clearTint());
+      if (this.playerHealth <= 0) {
         setTimeout(() => alert("¡Te mató el jefe!"), 50);
         this.scene.start('MenuSeleccion'); 
       }
     });
 
+    // DAÑO AL JEFE Y VICTORIA (Con tus Stats y Experiencia)
     this.physics.add.overlap(this.boss, this.bullets, (boss, bullet) => {
-      bullet.destroy(); 
+      bullet.destroy();
       this.bossHealth -= this.estadisticas.danoActual; // USA TU DAÑO
-      boss.setTint(0xff0000); this.time.delayedCall(100, () => boss.clearTint());
+      
+      boss.setTint(0xff0000);
+      this.time.delayedCall(100, () => boss.clearTint());
       if (this.bossHealth <= 0) {
         boss.destroy();
-        this.cameras.main.setBackgroundColor('#87CEEB'); // Vuelve a Celeste al ganar
-        const expGanada = 150; 
-        this.estadisticas.ganarExperiencia(expGanada); 
-        this.gestor.guardarProgreso(); 
+        this.cameras.main.setBackgroundColor('#87CEEB'); 
+        
+        const expGanada = 150;
+        this.estadisticas.ganarExperiencia(expGanada);
+        this.gestor.guardarProgreso();
+        
         setTimeout(() => alert(`¡Venciste al jefe! Has ganado ${expGanada} EXP.`), 50);
         this.scene.start('MenuSeleccion'); 
       }
     });
 
-    // ==========================================
-    // MENÚ DE ESCAPE / PAUSA INTEGRADO AQUÍ
-    // ==========================================
+    // MENÚ DE PAUSA
     this.input.keyboard.on('keydown-ESC', () => {
       this.scene.pause(); 
       this.scene.launch('PauseScene', { sceneKey: 'GameScene' }); 
@@ -480,53 +693,88 @@ class GameScene extends Phaser.Scene {
   }
 
   // ==========================================================
-  // TU CÓDIGO DE UPDATE EXACTO E INTACTO
+  // UPDATE: TU LÓGICA DE MOVILIDAD EXACTAMENTE COMO LA TENÍAS
   // ==========================================================
   update() {
-    let moverIzquierda, moverDerecha, botonSalto;
+    if (this.isDashing) return;
 
+    let moverIzquierda;
+    let moverDerecha;
+    let botonSalto;
+
+    // INTEGRAMOS LOS CONTROLES INVERTIDOS RESPETANDO TU CONFIGURACIÓN PERSONALIZADA
     if (this.bossPhase === 2) {
-      moverIzquierda = this.teclas.D.isDown; 
-      moverDerecha = this.teclas.A.isDown;   
-      botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.S); 
+      moverIzquierda = this.teclas.DERECHA.isDown; 
+      moverDerecha = this.teclas.IZQUIERDA.isDown;   
+      botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.ABAJO); 
     } else {
-      moverIzquierda = this.teclas.A.isDown;
-      moverDerecha = this.teclas.D.isDown;
-      botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.W);
+      moverIzquierda = this.teclas.IZQUIERDA.isDown;
+      moverDerecha = this.teclas.DERECHA.isDown;
+      botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.ARRIBA);
     }
 
+    // TU DASH (Nivel 3)
+    if (this.estadisticas.mecanicasMovilidad.nivel3 && Phaser.Input.Keyboard.JustDown(this.teclas.SHIFT)) {
+      this.isDashing = true;
+      const direccionDash = this.player.flipX ? -1 : 1;
+      this.player.setVelocityX(direccionDash * 800);
+      this.player.body.setAllowGravity(false);
+      this.player.setVelocityY(0);
+      this.time.delayedCall(200, () => {
+        this.isDashing = false;
+        this.player.body.setAllowGravity(true);
+      });
+      return;
+    }
+
+    let velXBase = this.player.velocidadX;
     if (moverIzquierda) {
-      this.player.setVelocityX(-this.player.velocidadX);
+      this.player.setVelocityX(-velXBase);
       this.player.flipX = true; 
     } else if (moverDerecha) {
-      this.player.setVelocityX(this.player.velocidadX);
+      this.player.setVelocityX(velXBase);
       this.player.flipX = false;
     } else {
       this.player.setVelocityX(0);
     }
 
     const isGrounded = this.player.body.onFloor() || this.player.body.touching.down;
+    const isTouchingWall = this.player.body.blocked.left || this.player.body.blocked.right;
     
     if (isGrounded && this.player.body.velocity.y >= 0) {
       this.player.jumpCount = 0;
     }
 
-    const char = this.personajeSeleccionado;
+    // TUS SALTOS (Nivel 1 y Nivel 2)
+    let maxJumps = 2; 
+    if (this.estadisticas.mecanicasMovilidad.nivel2) maxJumps = 3;
 
     if (botonSalto) {
       if (this.player.jumpCount === 0) {
         this.player.setVelocityY(this.player.fuerzaSalto); 
         this.player.jumpCount = 1;
-      } else if (this.player.jumpCount === 1) {
+      } else if (this.estadisticas.mecanicasMovilidad.nivel1 && isTouchingWall) { // Salto en pared
+        this.player.setVelocityY(this.player.fuerzaSalto); 
+        this.player.jumpCount = 1; 
+        const empuje = this.player.body.blocked.left ? 200 : -200;
+        this.player.setVelocityX(empuje);
+        this.player.flipX = this.player.body.blocked.left;
+      } else if (this.player.jumpCount > 0 && this.player.jumpCount < maxJumps) { // Doble/Triple Salto
         this.player.setVelocityY(this.player.fuerzaDobleSalto); 
-        this.player.jumpCount = 2;
+        this.player.jumpCount++;
       }
     }
 
-    if (!isGrounded || this.player.body.velocity.y < 0) {
-      if (this.player.body.velocity.y < 0) {
+    const char = this.personajeSeleccionado;
+    
+    if (!isGrounded) {
+      if (this.estadisticas.mecanicasMovilidad.nivel1 && isTouchingWall && this.player.body.velocity.y > 0) {
+        this.player.anims.play(`${char}_wall-jump`, true);
+      } else if (this.player.body.velocity.y < 0) {
         if (this.player.jumpCount === 2) {
           this.player.anims.play(`${char}_double-jump`, true);
+        } else if (this.player.jumpCount === 3) {
+          this.player.anims.play(`${char}_jump`, true); 
         } else {
           this.player.anims.play(`${char}_jump`, true);
         }
@@ -544,13 +792,12 @@ class GameScene extends Phaser.Scene {
 }
 
 // ==============================================================================
-// 5. ESCENA DE PAUSA (CÓDIGO ORIGINAL)
+// ESCENA 5: MENÚ DE PAUSA
 // ==============================================================================
 class PauseScene extends Phaser.Scene {
   constructor() { super({ key: 'PauseScene' }); }
   
   init(data) {
-    // Recibe de qué escena venimos para saber a cuál volver al reanudar
     this.escenaAnterior = data.sceneKey || 'GameScene';
   }
 
@@ -569,13 +816,12 @@ class PauseScene extends Phaser.Scene {
       this.scene.stop(this.escenaAnterior); 
       this.scene.start('MenuSeleccion'); 
     });
-    
+
     [btnContinuar, btnVolver].forEach(btn => { 
       btn.on('pointerover', () => btn.setScale(1.1)); 
       btn.on('pointerout', () => btn.setScale(1)); 
     });
     
-    // Quitar la pausa con ESC también
     this.input.keyboard.on('keydown-ESC', () => { 
       this.scene.resume(this.escenaAnterior); 
       this.scene.stop(); 
@@ -583,22 +829,35 @@ class PauseScene extends Phaser.Scene {
   }
 }
 
+// ==============================================================================
+// COMPONENTE REACT PRINCIPAL
+// ==============================================================================
 export default function App() {
   const gameRef = useRef(null);
   useEffect(() => {
     const config = {
-      type: Phaser.AUTO, width: 480, height: 320, pixelArt: true, scale: { zoom: 1.5 },
-      backgroundColor: '#000000', parent: gameRef.current,
-      physics: { default: 'arcade', arcade: { gravity: { y: 800 }, debug: false } },
-      scene: [MenuScene, MenuSeleccion, MejorasScene, GameScene, PauseScene]
+      type: Phaser.AUTO,
+      width: 480,  
+      height: 320,
+      pixelArt: true, 
+      scale: { zoom: 1.5 },
+      backgroundColor: '#000000', 
+      parent: gameRef.current,
+      physics: {
+        default: 'arcade',
+        arcade: { gravity: { y: 800 }, debug: false }
+      },
+      scene: [MenuScene, MenuSeleccion, MejorasScene, GameScene, PauseScene] 
     };
-    const game = new Phaser.Game(config); return () => { game.destroy(true); };
+    const game = new Phaser.Game(config);
+    return () => { game.destroy(true); };
   }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '20px', fontFamily: 'sans-serif' }}>
       <h2>Solemne 2 - Fusión Completa (Con Pausa)</h2>
       <div ref={gameRef} style={{ border: '4px solid #333', borderRadius: '8px', overflow: 'hidden' }}></div>
+      <p style={{ marginTop: '10px' }}>Derrota al jefe para ganar EXP. Vuelve al menú para mejorar tus stats.</p>
       <p style={{ marginTop: '10px' }}>Presiona <strong>ESC</strong> para pausar el juego. ¡Buena suerte con el jefe!</p>
     </div>
   );
