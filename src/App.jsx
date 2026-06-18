@@ -400,7 +400,7 @@ class GameScene extends Phaser.Scene {
       tsTerreno = map.addTilesetImage('Terrain (16x16)', 'tiles-terrain');
       tsLava = map.addTilesetImage('MAGAMA', 'tiles-lava');
     } catch(e) {
-      console.warn("Usando nombres alternativos para los tilesets"); 
+      console.warn("Usando nombres alternativos para los tilesets:", e.message); 
       tsTerreno = map.addTilesetImage('terrain', 'tiles-terrain');
       tsLava = map.addTilesetImage('lava', 'tiles-lava');
     }
