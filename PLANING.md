@@ -75,7 +75,7 @@ se le dio prioridad a completar la funcionalidad en su navegador base (chrome) p
 * [x] Pruebas de compatibilidad cross-browser: ejecutar el juego en Firefox y Safari, registrar y corregir diferencias de comportamiento respecto a Chrome (eventos de teclado, canvas rendering, estilos CSS).
 * [ ] Sistema de puntaje: completar la lógica de puntaje que quedó aplazada por los mapas; asegurarse de que incrementa correctamente al recoger ítems o superar niveles y se muestra en pantalla.
 * [x] Pruebas unitarias del frontend (Solemne 2): implementar tests sobre el sistema de puntaje ya funcional y sobre el guardado en localStorage (guardar, recuperar y limpiar partida). Usar Jest o Vitest según el setup existente.
-* [ ] README.md base: actualizar título y descripción del juego con la temática final; agregar instrucciones de ejecución local e instrucciones para levantar con Docker (ya existente en el proyecto).
+* [x] README.md base: actualizar título y descripción del juego con la temática final; agregar instrucciones de ejecución local e instrucciones para levantar con Docker (ya existente en el proyecto).
 
 **Tareas nuevas**
 
