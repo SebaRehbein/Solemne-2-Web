@@ -1,11 +1,11 @@
 {
-  "name": "Solemne-2-Web",
+  "name": "Sled-2-Web",
   "version": "1.0.0",
   "private": true,
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "pnpm --filter ./frontend run test",
     "lint": "pnpm --filter ./frontend run lint"
   },
   "keywords": [],
