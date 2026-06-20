@@ -6,7 +6,8 @@
   "main": "index.js",
   "scripts": {
     "test": "pnpm --filter ./frontend run test",
-    "lint": "pnpm --filter ./frontend run lint"
+    "lint": "pnpm --filter ./frontend run lint",
+    "build": "pnpm --filter ./frontend run build"
   },
   "keywords": [],
   "author": "",
