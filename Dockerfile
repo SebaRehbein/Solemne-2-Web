@@ -7,24 +7,28 @@ WORKDIR /app
 # Instalar pnpm globalmente
 RUN npm install -g pnpm
 
-# Copiar los archivos de gestión de dependencias
-COPY package.json pnpm-lock.yaml ./
+# 1. Copiar los archivos de configuración globales del monorepo
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Instalar las dependencias del proyecto
+# 2. Copiar los package.json de cada espacio de trabajo para que pnpm sepa qué instalar
+COPY frontend/package.json ./frontend/
+COPY backend/package.json ./backend/
+
+# Instalar de forma unificada las dependencias de todos los proyectos
 RUN pnpm install
 
-# Copiar el resto del código fuente
+# Copiar todo el resto del código fuente del monorepo
 COPY . .
 
-# Construir la aplicación para producción (Vite generará la carpeta 'dist')
+# Construir la aplicación para producción (el script raíz delega a vite dentro de frontend)
 RUN pnpm run build
 
 
 # Etapa 2: Servidor Web (Nginx)
 FROM nginx:alpine
 
-# Copiar los archivos construidos desde la etapa anterior a la carpeta de Nginx
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copiar los archivos construidos desde la etapa anterior (la carpeta dist ahora se genera dentro de frontend)
+COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 
 # Exponer el puerto 80 para acceder a la aplicación
 EXPOSE 80
