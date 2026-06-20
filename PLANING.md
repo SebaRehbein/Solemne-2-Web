@@ -79,7 +79,7 @@ se le dio prioridad a completar la funcionalidad en su navegador base (chrome) p
 
 **Tareas nuevas**
 
-* [ ] Inicializar monorepo con pnpm (workspaces: frontend/, backend/)
+* [x] Inicializar monorepo con pnpm (workspaces: frontend/, backend/)
 * [ ] Crear pnpm-lock.yaml y .gitignore adecuado (node_modules, .env, dist)
 * [ ] Configurar proyecto backend con Node.js + Express (o Fastify)
 * [ ] Instalar y configurar cookie-parser en Express (necesario para leer cookies httpOnly)
