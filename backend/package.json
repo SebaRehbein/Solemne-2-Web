@@ -1,5 +1,5 @@
 {
-  "name": "Solemne-2-Web",
+  "name": "backend",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -9,12 +9,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.1.3",
-      "onFail": "download"
-    }
-  },
   "type": "module"
 }

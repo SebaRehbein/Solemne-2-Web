@@ -232,7 +232,7 @@ Frontend:
 
 ## MEJORAS
 * [ ] implementar nivel principal antes de llegar al jefe.
-* [ ] implementar nivel jefe.
+* [x] implementar nivel jefe.
 * [ ] crear habilidad especial para SHURI.
 * [ ] crear habilidad especial para TYSON.
 * [ ] crear habilidad especial para FROG.
