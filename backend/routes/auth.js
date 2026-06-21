@@ -66,7 +66,7 @@ router.post('/register', async (req, res) => {
 });
 
 // ==========================================
-// NUEVO: POST /api/auth/login
+// POST /api/auth/login
 // ==========================================
 router.post('/login', async (req, res) => {
     try {
@@ -122,6 +122,29 @@ router.post('/login', async (req, res) => {
     } catch (error) {
         console.error('Error crítico en el endpoint de login:', error);
         res.status(500).json({ message: 'Error interno del servidor durante el inicio de sesión.' });
+    }
+});
+
+// ==========================================
+// POST /api/auth/logout
+// ==========================================
+router.post('/logout', (req, res) => {
+    try {
+        // Borramos la cookie 'sessionToken' del navegador
+        res.clearCookie('sessionToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict'
+        });
+
+        // Respondemos confirmando que el cierre de sesión fue exitoso
+        return res.status(200).json({ 
+            message: 'Sesión cerrada con éxito. Cookie eliminada.' 
+        });
+        
+    } catch (error) {
+        console.error('Error crítico en el endpoint de logout:', error);
+        res.status(500).json({ message: 'Error interno del servidor durante el cierre de sesión.' });
     }
 });
 
