@@ -84,7 +84,7 @@ se le dio prioridad a completar la funcionalidad en su navegador base (chrome) p
 * [x] Configurar proyecto backend con Node.js + Express (o Fastify)
 * [x] Instalar y configurar cookie-parser en Express (necesario para leer cookies httpOnly)
 * [x] Conectar MongoDB con Mongoose (URI en variable de entorno)
-* [ ] Crear modelo User en Mongoose (username, email, passwordHash, createdAt, scores[])
+* [x] Crear modelo User en Mongoose (username, email, passwordHash, createdAt, scores[])
 - Jugadores: username, email, passwordHash, role: 'player', progress (nivel, puntaje), createdAt
 - Admin: username, email, passwordHash, role: 'admin'
 * [ ] Implementar endpoint POST /api/auth/register con hash de contraseña (bcrypt)
