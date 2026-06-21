@@ -99,7 +99,7 @@ se le dio prioridad a completar la funcionalidad en su navegador base (chrome) p
 
 Autenticación de jugadores (cookie httpOnly):
 
-* [ ] POST /api/auth/register → crea usuario con role 'player', setea cookie httpOnly con JWT al finalizar
+* [x] POST /api/auth/register → crea usuario con role 'player', setea cookie httpOnly con JWT al finalizar
 * [ ] POST /api/auth/login → valida credenciales, responde seteando cookie httpOnly sessionToken=<JWT> con flags httpOnly, sameSite: 'strict', secure: true (en producción)
 * [ ] POST /api/auth/logout → limpia la cookie (res.clearCookie('sessionToken'))
 * [ ] GET /api/auth/me → lee el JWT desde req.cookies.sessionToken, retorna perfil del jugador
