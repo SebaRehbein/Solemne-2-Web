@@ -83,7 +83,7 @@ se le dio prioridad a completar la funcionalidad en su navegador base (chrome) p
 * [x] Crear pnpm-lock.yaml y .gitignore adecuado (node_modules, .env, dist)
 * [x] Configurar proyecto backend con Node.js + Express (o Fastify)
 * [x] Instalar y configurar cookie-parser en Express (necesario para leer cookies httpOnly)
-* [ ] Conectar MongoDB con Mongoose (URI en variable de entorno)
+* [x] Conectar MongoDB con Mongoose (URI en variable de entorno)
 * [ ] Crear modelo User en Mongoose (username, email, passwordHash, createdAt, scores[])
 - Jugadores: username, email, passwordHash, role: 'player', progress (nivel, puntaje), createdAt
 - Admin: username, email, passwordHash, role: 'admin'
