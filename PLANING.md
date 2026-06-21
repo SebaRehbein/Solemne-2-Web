@@ -87,7 +87,7 @@ se le dio prioridad a completar la funcionalidad en su navegador base (chrome) p
 * [x] Crear modelo User en Mongoose (username, email, passwordHash, createdAt, scores[])
 - Jugadores: username, email, passwordHash, role: 'player', progress (nivel, puntaje), createdAt
 - Admin: username, email, passwordHash, role: 'admin'
-* [ ] Implementar endpoint POST /api/auth/register con hash de contraseña (bcrypt)
+* [x] Implementar endpoint POST /api/auth/register con hash de contraseña (bcrypt)
 
 **Lo que se logró:**
 

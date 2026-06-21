@@ -3,7 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose'; 
-import User from './models/User.js'; // <-- 1. NUEVO: Importamos nuestro modelo de Usuario
+import User from './models/User.js'; 
+import authRoutes from './routes/auth.js'; // <-- NUEVO: Importamos las rutas de autenticación
 
 // Configuración de variables de entorno
 dotenv.config();
@@ -20,6 +21,9 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
+
+// --- RUTAS DE LA API --- //
+app.use('/api/auth', authRoutes); // <-- NUEVO: Acoplamos el enrutador a la ruta base
 
 // --- CONEXIÓN A MONGODB --- //
 // 2. NUEVO: Agregamos 'async' para poder usar 'await' al guardar los usuarios
