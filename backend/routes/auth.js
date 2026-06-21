@@ -148,4 +148,60 @@ router.post('/logout', (req, res) => {
     }
 });
 
+// ==========================================
+// GET /api/auth/me
+// ==========================================
+router.get('/me', async (req, res) => {
+    try {
+        // 1. Obtener el token desde las cookies de la petición
+        const token = req.cookies.sessionToken;
+
+        // 2. Si no existe el token, denegar el acceso inmediatamente
+        if (!token) {
+            return res.status(401).json({ 
+                message: 'No autorizado. No se encontró un token de sesión activo.' 
+            });
+        }
+
+        // 3. Verificar la autenticidad del token usando la clave secreta
+        const jwtSecret = process.env.JWT_SECRET || 'secreto_de_respaldo';
+        
+        let decoded;
+        try {
+            decoded = jwt.verify(token, jwtSecret);
+        } catch (jwtError) {
+            // Si el token expiró o fue alterado, devolvemos un error 401
+            return res.status(401).json({ 
+                message: 'Sesión inválida o expirada. Por favor, inicia sesión nuevamente.' 
+            });
+        }
+
+        // 4. Buscar al usuario en la base de datos utilizando el ID del payload decodificado
+        // .select('-passwordHash') asegura que el hash de la contraseña nunca viaje al cliente
+        const user = await User.findById(decoded.id).select('-passwordHash');
+
+        // Si el token es válido pero el usuario ya no existe en la base de datos
+        if (!user) {
+            return res.status(404).json({ message: 'El usuario ya no existe en el sistema.' });
+        }
+
+        // 5. Responder con los datos del perfil del usuario
+        return res.status(200).json({
+            authenticated: true,
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                role: user.role
+            }
+        });
+
+    } catch (error) {
+        console.error('Error crítico en el endpoint /me:', error);
+        return res.status(500).json({ 
+            message: 'Error interno del servidor al recuperar el perfil.' 
+        });
+    }
+});
+
 export default router;
