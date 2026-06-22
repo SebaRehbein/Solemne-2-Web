@@ -307,3 +307,28 @@ Provee las herramientas operativas para cuentas con privilegios administrativos.
           ]
         }
         ```
+---
+
+## Stack Tecnológico Completo
+
+A continuación se detalla el conjunto de herramientas, librerías y servicios utilizados para el desarrollo, despliegue y mantenimiento del ecosistema de **Berry Bad Luck**:
+
+| Herramienta | Rol dentro de la Arquitectura |
+| :--- | :--- |
+| **React 19** | Framework UI — Construcción de pantallas web (Login, Dashboard, Menús). |
+| **Phaser 4** | Motor de juego 2D web — Lógica de físicas, game loop y renderizado en Canvas/WebGL. |
+| **LocalStorage / Context** | Gestión del estado compartido (Teclas mapeadas, Token de Administrador). |
+| **Axios** | Cliente HTTP del frontend para consumir la API REST y el servicio externo. |
+| **Node.js + Express** | Entorno de ejecución y Framework para el servidor backend (API REST). |
+| **Mongoose** | ODM (Object Data Modeling) para interactuar y validar esquemas en MongoDB. |
+| **bcrypt** | Librería criptográfica para el hash seguro de contraseñas de usuarios. |
+| **jsonwebtoken (JWT)** | Estándar para la emisión y verificación de credenciales de sesión y roles. |
+| **cookie-parser** | Middleware de Express para la lectura y gestión de cookies de sesión `httpOnly`. |
+| **MongoDB** | Base de datos NoSQL — Almacenamiento persistente de usuarios, puntajes y progreso. |
+| **DiceBear API** | Servicio REST externo — Generación automatizada de avatares pixel art (En proceso). |
+| **Vite** | Bundler del frontend — Herramienta de construcción y empaquetado ultra rápido. |
+| **pnpm** | Gestor de paquetes centralizado y orquestador del monorepositorio (Workspaces). |
+| **Vitest + Testing Library** | Entorno de ejecución de pruebas unitarias y de integración para el frontend. |
+| **ESLint** | Linter — Análisis de código estático para asegurar calidad y estandarización. |
+| **Docker** | Contenedorización de la aplicación (`Dockerfile`) para estandarizar el despliegue. |
+| **GitHub Actions** | CI/CD — Flujos de trabajo automatizados para pruebas e integración continua. |
