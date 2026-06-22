@@ -108,8 +108,7 @@ Autenticación de jugadores (cookie httpOnly):
 
 Autenticación de admin (JWT por header):
 
-
-* [ ] POST /api/admin/login → valida credenciales de admin, retorna { token: <JWT> } en el body (sin cookie)
+* [x] POST /api/admin/login → valida credenciales de admin, retorna { token: <JWT> } en el body (sin cookie)
 * [ ] Middleware verifyAdmin: extrae y valida JWT desde req.headers.authorization (Bearer <token>)
 * [ ] Rutas de admin protegidas con verifyAdmin (p.ej. GET /api/admin/users → listar jugadores)
 

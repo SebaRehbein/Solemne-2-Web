@@ -3,8 +3,10 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose'; 
+import bcrypt from 'bcrypt';
 import User from './models/User.js'; 
-import authRoutes from './routes/auth.js'; // <-- NUEVO: Importamos las rutas de autenticación
+import authRoutes from './routes/auth.js'; 
+import adminAuthRoutes from './routes/adminAuth.js'; 
 
 // Configuración de variables de entorno
 dotenv.config();
@@ -23,42 +25,48 @@ app.use(express.json());
 app.use(cookieParser());
 
 // --- RUTAS DE LA API --- //
-app.use('/api/auth', authRoutes); // <-- NUEVO: Acoplamos el enrutador a la ruta base
+app.use('/api/auth', authRoutes); 
+app.use('/api/admin', adminAuthRoutes); // <-- Rutas de autenticación de administradores
 
 // --- CONEXIÓN A MONGODB --- //
-// 2. NUEVO: Agregamos 'async' para poder usar 'await' al guardar los usuarios
 mongoose.connect(MONGO_URI)
     .then(async () => {
         console.log('📦 Conectado exitosamente a MongoDB');
 
-        // --- 3. NUEVO: CÓDIGO DE PRUEBA PARA CREAR USUARIOS ---
+        // --- CÓDIGO DE PRUEBA ACTUALIZADO PARA CREAR ADMIN REAL ---
         try {
-            // Verificamos si ya existe el admin para no crearlo duplicado
-            const adminExists = await User.findOne({ email: 'admin@berrybadluck.com' });
+            const superAdminExists = await User.findOne({ email: 'superadmin@berrybadluck.com' });
             
-            if (!adminExists) {
-                // Creamos un Administrador
+            if (!superAdminExists) {
+                // Generamos un hash real para la contraseña "admin123"
+                const hashedAdminPassword = await bcrypt.hash('admin123', 10);
+
+                // Creamos un Administrador con el hash correcto
                 await User.create({
-                    username: 'AdminPrueba',
-                    email: 'admin@berrybadluck.com',
-                    passwordHash: 'hash_falso_admin_123',
+                    username: 'SuperAdmin',
+                    email: 'superadmin@berrybadluck.com',
+                    passwordHash: hashedAdminPassword,
                     role: 'admin'
                 });
+                console.log('👑 SuperAdmin de prueba creado con éxito!');
+            } else {
+                console.log('👑 El SuperAdmin de prueba ya existe.');
+            }
 
-                // Creamos un Jugador con progreso
+            // Mantenemos al jugador de prueba por si necesitas hacer pruebas con su progreso
+            const shuriExists = await User.findOne({ email: 'shuri@berrybadluck.com' });
+            if (!shuriExists) {
                 await User.create({
                     username: 'JugadorShuri',
                     email: 'shuri@berrybadluck.com',
-                    passwordHash: 'hash_falso_jugador_123',
+                    passwordHash: 'hash_falso_jugador_123', // Este no se puede loguear porque el hash es falso
                     role: 'player',
                     progress: { nivel: 3, puntaje: 1500 },
                     scores: [500, 1000, 1500]
                 });
-
-                console.log('👤 ¡Usuarios de prueba creados en la base de datos!');
-            } else {
-                console.log('👤 Los usuarios de prueba ya existían.');
+                console.log('🐶 Jugador Shuri creado de prueba.');
             }
+
         } catch (err) {
             console.error('❌ Error al crear usuarios de prueba:', err);
         }
