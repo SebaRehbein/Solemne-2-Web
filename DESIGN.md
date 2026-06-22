@@ -87,7 +87,7 @@ Es un juego de plataformas web en 2D que fusiona la dificultad extrema y trampas
 ---
 
 ## Arquitectura Fullstack
-
+```json
 ┌─────────────────────────────────────────────────────────────┐
 │                          CLIENTE                            │
 │                                                             │
@@ -122,10 +122,12 @@ Es un juego de plataformas web en 2D que fusiona la dificultad extrema y trampas
 │                   SERVICIO REST EXTERNO                     │
 │                       (EN PROCESO)                          │
 └─────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## Estructura de carpetas del repositorio
-
+```json
 solemne-2-web/
 ├── .github/
 │   └── workflows/
@@ -170,7 +172,7 @@ solemne-2-web/
 ├── package.json                      # Configuración del monorepositorio
 ├── pnpm-lock.yaml                    # Bloqueo de versiones de dependencias
 └── pnpm-workspace.yaml               # Configuración del espacio de trabajo pnpm
-
+```
 ---
 
 ## Modelo de Datos (MongoDB)
