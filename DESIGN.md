@@ -87,7 +87,8 @@ Es un juego de plataformas web en 2D que fusiona la dificultad extrema y trampas
 ---
 
 ## Arquitectura Fullstack
-```json
+
+```
 ┌─────────────────────────────────────────────────────────────┐
 │                          CLIENTE                            │
 │                                                             │
@@ -127,7 +128,8 @@ Es un juego de plataformas web en 2D que fusiona la dificultad extrema y trampas
 ---
 
 ## Estructura de carpetas del repositorio
-```json
+
+```
 solemne-2-web/
 ├── .github/
 │   └── workflows/
