@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { verifyAdmin } from '../middlewares/authMiddleware.js'; // <-- NUEVO: Importamos el middleware de admin
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ router.post('/login', async (req, res) => {
         // Devolvemos el token directamente en el JSON para que el frontend lo guarde
         return res.status(200).json({
             message: 'Inicio de sesión de administrador exitoso.',
-            token: token, // <-- Aquí entregamos el JWT
+            token: token,
             user: {
                 id: user._id,
                 username: user.username,
@@ -54,6 +55,35 @@ router.post('/login', async (req, res) => {
     } catch (error) {
         console.error('Error crítico en el login de administrador:', error);
         res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+});
+
+// ==========================================================
+// NUEVO: GET /api/admin/me
+// Endpoint protegido para obtener el perfil del administrador
+// ==========================================================
+router.get('/me', verifyAdmin, async (req, res) => {
+    try {
+        // Buscamos al administrador en la base de datos usando el ID inyectado por el middleware
+        // .select('-passwordHash') asegura que el hash de la contraseña nunca viaje al cliente
+        const admin = await User.findById(req.user.id).select('-passwordHash');
+
+        if (!admin) {
+            return res.status(404).json({ message: 'El administrador ya no existe.' });
+        }
+
+        return res.status(200).json({
+            authenticated: true,
+            admin: {
+                id: admin._id,
+                username: admin.username,
+                email: admin.email,
+                role: admin.role
+            }
+        });
+    } catch (error) {
+        console.error('Error en GET /admin/me:', error);
+        return res.status(500).json({ message: 'Error interno del servidor.' });
     }
 });
 
