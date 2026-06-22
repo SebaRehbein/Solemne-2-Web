@@ -87,4 +87,29 @@ router.get('/me', verifyAdmin, async (req, res) => {
     }
 });
 
+// ==========================================================
+// GET /api/admin/users
+// Endpoint protegido para listar todos los jugadores
+// ==========================================================
+router.get('/users', verifyAdmin, async (req, res) => {
+    try {
+        // Se filtran los documentos para obtener únicamente aquellos con rol 'player'
+        // Se excluye passwordHash para evitar la exposición de datos críticos en la respuesta
+        const players = await User.find({ role: 'player' }).select('-passwordHash');
+
+        if (!players || players.length === 0) {
+            return res.status(404).json({ message: 'No se encontraron jugadores registrados.' });
+        }
+
+        return res.status(200).json({
+            message: 'Listado de jugadores obtenido exitosamente.',
+            total: players.length,
+            players: players
+        });
+    } catch (error) {
+        console.error('Error crítico en GET /admin/users:', error);
+        return res.status(500).json({ message: 'Error interno del servidor al procesar la solicitud.' });
+    }
+});
+
 export default router;
