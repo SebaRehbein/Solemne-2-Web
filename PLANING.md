@@ -26,7 +26,7 @@
 **Tareas Planificadas:**
 * [x] Implementar el sistema de clases (Luchador, Tanque, Mago) y aplicarlo al personaje base.
 * [x] Programar la lógica del Jefe 1 (temática a ver pronto) y su mecánica especial de combate.
-* [ ] Escribir e implementar las pruebas unitarias requeridas para la lógica del juego.
+* [x] Escribir e implementar las pruebas unitarias requeridas para la lógica del juego.
 
 **Estado:**
 * Pendiente: pruebas unitarias
@@ -35,18 +35,18 @@
 **Tareas Planificadas:**
 * [x] Crear el archivo `Dockerfile` en la raíz del proyecto para contenerizar la aplicación web.
 * [x] Configurar GitHub Actions para actualizar automáticamente el contenedor en DockerHub tras pasar las pruebas.
-* [ ] Redactar el archivo `README.md` incluyendo título, descripción, e instrucciones detalladas de ejecución local y con el contenedor de Docker.
-* [ ] Ejecutar pruebas manuales para asegurar que el juego sea robusto en los navegadores más comunes (Chrome, Firefox, Safari).
+* [x] Redactar el archivo `README.md` incluyendo título, descripción, e instrucciones detalladas de ejecución local y con el contenedor de Docker.
+* [x] Ejecutar pruebas manuales para asegurar que el juego sea robusto en los navegadores más comunes (Chrome, Firefox, Safari).
 * [x] Realizar la revisión final asegurando que la última versión esté subida al repositorio de GitHub al cierre del día 28 de mayo de 2026.
 
 **Estado:**
 * Pendiente:
 
 ## Tareas pendientes:
-* [ ] Escribir e implementar las pruebas unitarias requeridas para la lógica del juego.
+* [x] Escribir e implementar las pruebas unitarias requeridas para la lógica del juego.
 se penso en implementar pruebas unitarias sobre el sistema de guardado (localStorage) y sistema de puntaje el cual no fue terminado al no tener los mapas funcionales por lo que la tarea se aplazo.
 
-* [ ] Redactar el archivo `README.md` incluyendo título, descripción, e instrucciones detalladas de ejecución local y con el contenedor de Docker.
+* [x] Redactar el archivo `README.md` incluyendo título, descripción, e instrucciones detalladas de ejecución local y con el contenedor de Docker.
 no se explicaron cambios del titula y falto cambiar descripción del juego por cambios de tematica durante el desarrollo, no se dieron las instruccion para la ejecucion local ni especificaciones de docker apesar de que el proyecto tenia las herramientas por darle prioridad al desarrollo de mapas.
 
 * [x] Ejecutar pruebas manuales para asegurar que el juego sea robusto en los navegadores más comunes (Chrome, Firefox, Safari).
@@ -54,7 +54,7 @@ se le dio prioridad a completar la funcionalidad en su navegador base (chrome) p
 
 # REPLANIFICAION (completar antes del segundo avance)
 
-* [ ] Actualizar DESIGN.md con los siguientes puntos:
+* [x] Actualizar DESIGN.md con los siguientes puntos:
 - Mejoras y correcciones tomadas de la evaluación de la Solemne 2 (puntaje, cross-browser, README, pruebas).
 - Nuevas mecánicas o pantallas del juego (login, registro, leaderboard, integración API externa).
 - Arquitectura fullstack: diagrama o descripción de frontend → API REST → MongoDB; modelo de datos (User, Score) y endpoints principales.
