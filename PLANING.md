@@ -103,7 +103,7 @@ Autenticación de jugadores (cookie httpOnly):
 * [x] POST /api/auth/login → valida credenciales, responde seteando cookie httpOnly sessionToken=<JWT> con flags httpOnly, sameSite: 'strict', secure: true (en producción)
 * [x] POST /api/auth/logout → limpia la cookie (res.clearCookie('sessionToken'))
 * [x] GET /api/auth/me → lee el JWT desde req.cookies.sessionToken, retorna perfil del jugador
-* [ ] Middleware verifyPlayer: extrae y valida JWT desde req.cookies.sessionToken
+* [x] Middleware verifyPlayer: extrae y valida JWT desde req.cookies.sessionToken
 
 
 Autenticación de admin (JWT por header):
