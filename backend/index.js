@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import User from './models/User.js'; 
 import authRoutes from './routes/auth.js'; 
 import adminAuthRoutes from './routes/adminAuth.js'; 
+import cookieRoutes from './routes/cookieRoutes.js'; // <-- 1. Importamos las nuevas rutas de cookies
 
 // Configuración de variables de entorno
 dotenv.config();
@@ -22,11 +23,12 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser()); // <-- Excelente, esto sigue estando antes de las rutas
 
 // --- RUTAS DE LA API --- //
 app.use('/api/auth', authRoutes); 
 app.use('/api/admin', adminAuthRoutes); // <-- Rutas de autenticación de administradores
+app.use('/api/cookies', cookieRoutes); // <-- 2. Definimos que las rutas usen el prefijo /api/cookies
 
 // --- CONEXIÓN A MONGODB --- //
 mongoose.connect(MONGO_URI)
@@ -80,26 +82,6 @@ mongoose.connect(MONGO_URI)
 // Rutas base
 app.get('/', (req, res) => {
     res.status(200).json({ status: 'Operativo', message: 'El servidor backend está funcionando correctamente.' });
-});
-
-// Rutas de prueba de cookies (mantienes las que ya tenías)
-app.get('/crear-cookie', (req, res) => {
-    res.cookie('token_sesion', 'super_secreto_123', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 1000 * 60 * 60 * 24 
-    });
-    res.json({ message: 'Cookie httpOnly entregada al navegador con éxito.' });
-});
-
-app.get('/leer-cookie', (req, res) => {
-    const miToken = req.cookies.token_sesion;
-    if (miToken) {
-        res.json({ message: '¡Cookie recibida!', token: miToken });
-    } else {
-        res.status(401).json({ message: 'No tienes autorización (No hay cookie)' });
-    }
 });
 
 // Inicialización del proceso de escucha
