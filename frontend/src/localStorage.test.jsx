@@ -1,4 +1,21 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { vi } from 'vitest';
+
+// Creamos un reemplazo manual para esquivar el bloqueo de Node 26
+const localStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => { store[key] = value.toString(); },
+    removeItem: (key) => { delete store[key]; },
+    clear: () => { store = {}; }
+  };
+})();
+
+// Forzamos a Vitest a inyectar esto globalmente
+vi.stubGlobal('localStorage', localStorageMock);
+
+// ... (Tu código original con describe y beforeEach se mantiene intacto hacia abajo)
 
 describe('Pruebas de la API localStorage', () => {
 
