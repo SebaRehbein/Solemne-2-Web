@@ -8,14 +8,16 @@ const localStorageMock = (() => {
     getItem: (key) => store[key] || null,
     setItem: (key, value) => { store[key] = value.toString(); },
     removeItem: (key) => { delete store[key]; },
-    clear: () => { store = {}; }
+    clear: () => { store = {}; },
+    // Agregamos la propiedad dinámica length que tu prueba necesita
+    get length() {
+      return Object.keys(store).length;
+    }
   };
 })();
 
 // Forzamos a Vitest a inyectar esto globalmente
 vi.stubGlobal('localStorage', localStorageMock);
-
-// ... (Tu código original con describe y beforeEach se mantiene intacto hacia abajo)
 
 describe('Pruebas de la API localStorage', () => {
 
