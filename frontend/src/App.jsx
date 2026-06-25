@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
-
+import api from './api/axios';
+import './App.css';
 // ==============================================================================
 // 1. SISTEMA DE PROGRESIÓN Y ESTADÍSTICAS
 // ==============================================================================
@@ -834,6 +835,16 @@ class PauseScene extends Phaser.Scene {
 // ==============================================================================
 export default function App() {
   const gameRef = useRef(null);
+  const gameInstanceRef = useRef(null);
+
+  // Estados de autenticación
+  const [user, setUser] = useState(null); 
+  const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
+  const [formData, setFormData] = useState({ username: '', email: '', password: '' });
+  const [error, setError] = useState('');
+
+  // Inicialización de Phaser
   useEffect(() => {
     const config = {
       type: Phaser.AUTO,
@@ -850,15 +861,152 @@ export default function App() {
       scene: [MenuScene, MenuSeleccion, MejorasScene, GameScene, PauseScene] 
     };
     const game = new Phaser.Game(config);
-    return () => { game.destroy(true); };
+    gameInstanceRef.current = game;
+    return () => { game.destroy(true); gameInstanceRef.current = null; };
   }, []);
 
+  // Bloquea el teclado y el mouse del juego mientras un modal de autenticación esté abierto
+  useEffect(() => {
+    const game = gameInstanceRef.current;
+    if (!game) return;
+    const modalAbierto = showLogin || showRegister;
+
+    if (modalAbierto) {
+      game.input.enabled = false;
+      if (game.input.keyboard) game.input.keyboard.enabled = false;
+    } else {
+      game.input.enabled = true;
+      if (game.input.keyboard) game.input.keyboard.enabled = true;
+    }
+  }, [showLogin, showRegister]);
+
+  // Manejo de formularios
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      await api.post('/auth/register', {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password
+      });
+      alert('Registro completado. Procede a iniciar sesión.');
+      setShowRegister(false);
+      setShowLogin(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Fallo en el registro.');
+    }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      const response = await api.post('/auth/login', {
+        email: formData.email,
+        password: formData.password
+      });
+      setUser(response.data.user); 
+      setShowLogin(false);
+      setFormData({ username: '', email: '', password: '' });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Credenciales inválidas.');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout');
+      setUser(null);
+    } catch (err) {
+      console.error('Error durante la desconexión', err);
+      setUser(null);
+    }
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '20px', fontFamily: 'sans-serif' }}>
-      <h2>Solemne 2 - Fusión Completa (Con Pausa)</h2>
+    
+      <div className="game-wrapper">
+      {/* INTERFAZ DE AUTENTICACIÓN LATERAL */}
+      <div className="auth-sidebar">
+        
+        {/* Círculo Central/Avatar (Fijo a la derecha) */}
+        <div className="menu-circle">
+          {user ? (
+            <div className="user-initial">
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+          ) : (
+            <svg className="avatar-silhouette" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/>
+            </svg>
+          )}
+        </div>
+
+        {/* Contenedor de Botones (Apilados a un costado) */}
+        <div className="auth-buttons">
+          {!user ? (
+            <>
+              <button className="menu-btn" onClick={() => setShowLogin(true)}>Iniciar sesión</button>
+              <button className="menu-btn register-btn" onClick={() => setShowRegister(true)}>Registrarse</button>
+            </>
+          ) : (
+            <>
+              <span className="welcome-text">Jugador: {user.username}</span>
+              <button className="menu-btn logout-btn" onClick={handleLogout}>Cerrar sesión</button>
+            </>
+          )}
+        </div>
+
+      </div>
+
+      {/* CONTENEDOR DEL JUEGO PHASER */}
+      <h2 style={{ marginTop: '20px' }}>Solemne 2 - Fusión Completa (Con Pausa)</h2>
       <div ref={gameRef} style={{ border: '4px solid #333', borderRadius: '8px', overflow: 'hidden' }}></div>
       <p style={{ marginTop: '10px' }}>Derrota al jefe para ganar EXP. Vuelve al menú para mejorar tus stats.</p>
-      <p style={{ marginTop: '10px' }}>Presiona <strong>ESC</strong> para pausar el juego. ¡Buena suerte con el jefe!</p>
+      <p style={{ marginTop: '10px' }}>Presiona <strong>ESC</strong> para pausar el juego. Buena suerte.</p>
+
+      {/* MODAL DE REGISTRO */}
+      {showRegister && (
+        <div className="modal-overlay">
+          <div className="auth-modal">
+            <h2>Crear Cuenta</h2>
+            {error && <p className="error-msg">{error}</p>}
+            <form onSubmit={handleRegister}>
+              <input type="text" name="username" placeholder="Nombre de usuario" required onChange={handleChange} value={formData.username} />
+              <input type="email" name="email" placeholder="Correo electrónico" required onChange={handleChange} value={formData.email} />
+              <input type="password" name="password" placeholder="Contraseña" required onChange={handleChange} value={formData.password} />
+              <div className="modal-actions">
+                <button type="submit" className="submit-btn">Registrarse</button>
+                <button type="button" className="close-btn" onClick={() => setShowRegister(false)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE LOGIN */}
+      {showLogin && (
+        <div className="modal-overlay">
+          <div className="auth-modal">
+            <h2>Acceso</h2>
+            {error && <p className="error-msg">{error}</p>}
+            <form onSubmit={handleLogin}>
+              <input type="email" name="email" placeholder="Correo electrónico" required onChange={handleChange} value={formData.email} />
+              <input type="password" name="password" placeholder="Contraseña" required onChange={handleChange} value={formData.password} />
+              <div className="modal-actions">
+                <button type="submit" className="submit-btn">Entrar</button>
+                <button type="button" className="close-btn" onClick={() => setShowLogin(false)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
