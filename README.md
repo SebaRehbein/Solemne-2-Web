@@ -1,4 +1,4 @@
-# Solemne 2 Proyecto Juego Web (nombre aun en discusión)
+# Solemne 2 Proyecto Juego Web (BerryBadLuck)
 
 ## Información del Proyecto
 * **Asignatura:** Aplicaciones y Tecnologías para la Web.
@@ -20,7 +20,7 @@ Es un juego de plataformas en 2D que combina la dificultad extrema de los juegos
 
 ### Prerrequisitos
 Antes de comenzar, asegúrate de contar con las siguientes herramientas instaladas en tu sistema:
-* **Node.js** (versión 18.0 o superior recomendada)
+* **Node.js** (versión 26.0)
 * **pnpm** (gestor de paquetes optimizado para el proyecto)
 
 ### Pasos de Instalación y Despliegue
