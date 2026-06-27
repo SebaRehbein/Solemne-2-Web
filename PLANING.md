@@ -115,7 +115,7 @@ Autenticación de admin (JWT por header):
 Frontend:
 
 * [x] Pantalla de Registro y Login para jugadores (el navegador maneja la cookie automáticamente)
-* [ ] Panel de admin separado: guarda el JWT en memoria o localStorage y lo adjunta manualmente en cada petición
+* [x] Panel de admin separado: guarda el JWT en memoria o localStorage y lo adjunta manualmente en cada petición
 * [ ] Proteger acceso al juego: redirigir a login si GET /api/auth/me falla
 
 **Lo que se logró:**
