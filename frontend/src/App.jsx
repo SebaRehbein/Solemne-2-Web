@@ -865,6 +865,16 @@ export default function App() {
     return () => { game.destroy(true); gameInstanceRef.current = null; };
   }, []);
 
+  // Sincroniza la sesión al cargar la página: si la cookie sigue siendo
+  // válida, recupera el usuario sin que tenga que loguearse de nuevo.
+  // Si falla (sin cookie, cookie vencida, etc.), simplemente deja user en
+  // null — el juego sigue siendo jugable igual, solo que sin sesión activa.
+  useEffect(() => {
+    api.get('/auth/me')
+      .then((response) => setUser(response.data.user))
+      .catch(() => setUser(null));
+  }, []);
+
   // Bloquea el teclado y el mouse del juego mientras un modal de autenticación esté abierto
   useEffect(() => {
     const game = gameInstanceRef.current;
