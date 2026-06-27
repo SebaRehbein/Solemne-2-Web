@@ -128,7 +128,7 @@ Frontend:
 
 **Tareas planificadas:**
 
-* [ ] Crear modelo Score: userId, nivel alcanzado, puntos, fecha (o embeber en User)
+* [x] Crear modelo Score: userId, nivel alcanzado, puntos, fecha (o embeber en User)
 * [ ] POST /api/scores → guarda puntaje al terminar partida; protegido con verifyPlayer (lee usuario desde la cookie)
 * [ ] GET /api/scores/leaderboard → top 10 puntajes globales (ruta pública)
 * [ ] GET /api/scores/me → historial de partidas del jugador autenticado (protegido con verifyPlayer)

@@ -27,16 +27,33 @@ const userSchema = new mongoose.Schema({
     progress: {
         nivel: {
             type: Number,
-            default: 1 // Todos empiezan en el nivel 1
+            default: 1 // Nivel actual del jugador
         },
-        puntaje: {
-            type: Number,
-            default: 0 // El puntaje inicial es 0
+        // Guarda únicamente el mejor resultado histórico del jugador,
+        // junto con los datos crudos que lo generaron.
+        mejorPuntaje: {
+            puntos: {
+                type: Number,
+                default: 0 // Mejor puntaje calculado hasta ahora
+            },
+            nivelAlcanzado: {
+                type: Number,
+                default: 0 // Nivel que alcanzó en esa mejor partida
+            },
+            tiempoSegundos: {
+                type: Number,
+                default: null // Cuánto tardó en esa mejor partida
+            },
+            danoRecibido: {
+                type: Number,
+                default: null // Cuánto daño acumuló en esa mejor partida
+            },
+            fecha: {
+                type: Date,
+                default: null // Cuándo logró ese mejor puntaje
+            }
         }
     },
-    scores: [{
-        type: Number // Un arreglo (lista) para guardar el historial de puntajes del jugador
-    }],
     createdAt: {
         type: Date,
         default: Date.now // Guarda automáticamente la fecha y hora de creación

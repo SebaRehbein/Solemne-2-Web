@@ -63,8 +63,16 @@ mongoose.connect(MONGO_URI)
                     email: 'shuri@berrybadluck.com',
                     passwordHash: 'hash_falso_jugador_123', // Este no se puede loguear porque el hash es falso
                     role: 'player',
-                    progress: { nivel: 3, puntaje: 1500 },
-                    scores: [500, 1000, 1500]
+                    progress: {
+                        nivel: 3,
+                        mejorPuntaje: {
+                            puntos: 1500,
+                            nivelAlcanzado: 3,
+                            tiempoSegundos: 180,
+                            danoRecibido: 40,
+                            fecha: new Date()
+                        }
+                    }
                 });
                 console.log('🐶 Jugador Shuri creado de prueba.');
             }
