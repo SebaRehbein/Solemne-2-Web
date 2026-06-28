@@ -95,4 +95,43 @@ router.get('/leaderboard', async (req, res) => {
     }
 });
 
+// ==========================================
+// GET /api/scores/me
+// Progreso personal del jugador autenticado: nivel actual, mejor puntaje,
+// y su posición en el ranking global (para comparar contra el leaderboard).
+// Protegido con verifyPlayer: lee el usuario desde la cookie.
+// ==========================================
+router.get('/me', verifyPlayer, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('username progress');
+
+        if (!user) {
+            return res.status(404).json({ message: 'El usuario ya no existe en el sistema.' });
+        }
+
+        const tienePuntaje = user.progress.mejorPuntaje.puntos > 0;
+
+        // Posición en el ranking: cuántos jugadores tienen más puntos que el actual, + 1.
+        // Si el jugador todavía no tiene puntaje, no tiene sentido calcular una posición.
+        const posicion = tienePuntaje
+            ? await User.countDocuments({
+                role: 'player',
+                'progress.mejorPuntaje.puntos': { $gt: user.progress.mejorPuntaje.puntos }
+            }) + 1
+            : null;
+
+        return res.status(200).json({
+            username: user.username,
+            posicion,
+            puntos: user.progress.mejorPuntaje.puntos,
+            nivelAlcanzado: user.progress.mejorPuntaje.nivelAlcanzado,
+            nivel: user.progress.nivel
+        });
+
+    } catch (error) {
+        console.error('Error crítico en GET /api/scores/me:', error);
+        return res.status(500).json({ message: 'Error interno del servidor al obtener el progreso.' });
+    }
+});
+
 export default router;
