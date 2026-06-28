@@ -66,4 +66,33 @@ router.post('/', verifyPlayer, async (req, res) => {
     }
 });
 
+// ==========================================
+// GET /api/scores/leaderboard
+// Top 10 puntajes globales. Ruta pública: no requiere sesión.
+// ==========================================
+router.get('/leaderboard', async (req, res) => {
+    try {
+        const top10 = await User.find({
+            role: 'player',
+            'progress.mejorPuntaje.puntos': { $gt: 0 }
+        })
+            .select('username progress.mejorPuntaje')
+            .sort({ 'progress.mejorPuntaje.puntos': -1 })
+            .limit(10);
+
+        return res.status(200).json({
+            leaderboard: top10.map((user) => ({
+                username: user.username,
+                puntos: user.progress.mejorPuntaje.puntos,
+                nivelAlcanzado: user.progress.mejorPuntaje.nivelAlcanzado,
+                fecha: user.progress.mejorPuntaje.fecha
+            }))
+        });
+
+    } catch (error) {
+        console.error('Error crítico en GET /api/scores/leaderboard:', error);
+        return res.status(500).json({ message: 'Error interno del servidor al obtener el leaderboard.' });
+    }
+});
+
 export default router;

@@ -129,8 +129,8 @@ Frontend:
 **Tareas planificadas:**
 
 * [x] Crear modelo Score: userId, nivel alcanzado, puntos, fecha (o embeber en User)
-* [ ] POST /api/scores → guarda puntaje al terminar partida; protegido con verifyPlayer (lee usuario desde la cookie)
-* [ ] GET /api/scores/leaderboard → top 10 puntajes globales (ruta pública)
+* [x] POST /api/scores → guarda puntaje al terminar partida; protegido con verifyPlayer (lee usuario desde la cookie)
+* [x] GET /api/scores/leaderboard → top 10 puntajes globales (ruta pública)
 * [ ] GET /api/scores/me → historial de partidas del jugador autenticado (protegido con verifyPlayer)
 * [ ] Mostrar leaderboard y progreso personal en el frontend
 * [ ] Verificar que las correcciones de la Solemne 2 (puntaje, localStorage, cross-browser, README) funcionan correctamente en la nueva arquitectura fullstack
