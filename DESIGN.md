@@ -121,7 +121,7 @@ Es un juego de plataformas web en 2D que fusiona la dificultad extrema y trampas
                            ▼ HTTP (En desarrollo)
 ┌─────────────────────────────────────────────────────────────┐
 │                   SERVICIO REST EXTERNO                     │
-│                       (EN PROCESO)                          │
+│                         (DiceBear)                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 

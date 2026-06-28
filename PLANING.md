@@ -143,11 +143,11 @@ Frontend:
 
 **Tareas planificadas:**
 
-* [ ] Consumir la API REST externa elegida (documentada en DESIGN.md) desde el backend para evitar CORS y ocultar claves
+* [x] Consumir la API REST externa elegida (documentada en DESIGN.md) desde el backend para evitar CORS y ocultar claves
 - Ejemplo para juego de plataformas: Open Trivia DB para preguntas entre niveles, PokeAPI para personajes/enemigos temáticos, o cualquier API coherente con el juego
-* [ ] Crear endpoint proxy en el backend (p.ej. GET /api/external/...) que exponga los datos al frontend
-* [ ] Integrar la funcionalidad externa en alguna mecánica del juego (pantalla entre niveles, power-ups, etc.)
-* [ ] Pruebas manuales del flujo completo: registro → login (cookie) → jugar → guardar puntaje → ranking
+* [x] Crear endpoint proxy en el backend (p.ej. GET /api/external/...) que exponga los datos al frontend
+* [x] Integrar la funcionalidad externa en alguna mecánica del juego (pantalla entre niveles, power-ups, etc.)
+* [x] Pruebas manuales del flujo completo: registro → login (cookie) → jugar → guardar puntaje → ranking
 
 **Lo que se logró:**
 
