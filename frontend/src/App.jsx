@@ -386,6 +386,13 @@ class GameScene extends Phaser.Scene {
     this.gestor = this.registry.get('gestorProgreso');
     this.estadisticas = this.gestor.obtenerEstadisticasDe(this.personajeSeleccionado);
 
+    // Tracking para el sistema de puntaje (POST /api/scores al terminar la partida).
+    // this.time.now es el reloj interno de Phaser: se congela automáticamente
+    // cuando this.scene.pause() está activo (menú de pausa), a diferencia de
+    // Date.now() que nunca se detiene.
+    this.tiempoInicio = this.time.now;
+    this.danoRecibidoTotal = 0;
+
     this.cameras.main.setBackgroundColor('#87CEEB'); 
     
     // TEXTO DE ADVERTENCIA DEL JEFE
@@ -472,10 +479,12 @@ class GameScene extends Phaser.Scene {
         this.physics.add.collider(this.player, capaLava, () => {
             this.player.setPosition(100, 50);
             this.playerHealth -= 20; 
+            this.danoRecibidoTotal += 20;
             this.updateHealthBar();
             this.player.setTint(0xffa500);
             this.time.delayedCall(300, () => this.player.clearTint());
             if (this.playerHealth <= 0) {
+                this.enviarPuntaje(0); // murió: nivelAlcanzado simbólico = 0
                 setTimeout(() => alert("¡Te quemaste en la lava!"), 50);
                 this.scene.start('MenuSeleccion'); 
             }
@@ -657,10 +666,12 @@ class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.bossBullets, (player, bullet) => {
       bullet.destroy();
       this.playerHealth -= 10;
+      this.danoRecibidoTotal += 10;
       this.updateHealthBar();
       player.setTint(0xff0000);
       this.time.delayedCall(200, () => player.clearTint());
       if (this.playerHealth <= 0) {
+        this.enviarPuntaje(0); // murió: nivelAlcanzado simbólico = 0
         setTimeout(() => alert("¡Te mató el jefe!"), 50);
         this.scene.start('MenuSeleccion'); 
       }
@@ -680,6 +691,7 @@ class GameScene extends Phaser.Scene {
         const expGanada = 150;
         this.estadisticas.ganarExperiencia(expGanada);
         this.gestor.guardarProgreso();
+        this.enviarPuntaje(1); // venció al jefe: nivelAlcanzado simbólico = 1
         
         setTimeout(() => alert(`¡Venciste al jefe! Has ganado ${expGanada} EXP.`), 50);
         this.scene.start('MenuSeleccion'); 
@@ -690,6 +702,28 @@ class GameScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-ESC', () => {
       this.scene.pause(); 
       this.scene.launch('PauseScene', { sceneKey: 'GameScene' }); 
+    });
+  }
+
+  // ==========================================================
+  // ENVÍO DE PUNTAJE AL BACKEND (POST /api/scores)
+  // ==========================================================
+  // nivelAlcanzado es, por ahora, simbólico: 1 = venció al jefe, 0 = murió.
+  // Cuando se implemente el nivel principal antes del jefe, este número
+  // pasará a ser un contador real de pantallas superadas.
+  // Solo se envía si hay un usuario logueado (user !== null); si juega
+  // sin cuenta, el progreso simplemente no se guarda en el backend.
+  enviarPuntaje(nivelAlcanzado) {
+    if (!this.registry.get('usuarioActual')) return;
+
+    const tiempoSegundos = Math.round((this.time.now - this.tiempoInicio) / 1000);
+
+    api.post('/scores', {
+      nivelAlcanzado,
+      tiempoSegundos,
+      danoRecibido: this.danoRecibidoTotal
+    }).catch((error) => {
+      console.error('No se pudo guardar el puntaje:', error);
     });
   }
 
@@ -874,6 +908,16 @@ export default function App() {
       .then((response) => setUser(response.data.user))
       .catch(() => setUser(null));
   }, []);
+
+  // Refleja el usuario actual dentro del registry de Phaser. GameScene lo
+  // usa para decidir si manda el puntaje al backend (POST /api/scores) al
+  // terminar la partida: si no hay sesión, el juego sigue siendo jugable
+  // pero el progreso no se guarda en el servidor.
+  useEffect(() => {
+    const game = gameInstanceRef.current;
+    if (!game) return;
+    game.registry.set('usuarioActual', user);
+  }, [user]);
 
   // Bloquea el teclado y el mouse del juego mientras un modal de autenticación esté abierto
   useEffect(() => {

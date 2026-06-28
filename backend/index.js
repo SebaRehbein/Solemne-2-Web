@@ -7,7 +7,8 @@ import bcrypt from 'bcrypt';
 import User from './models/User.js'; 
 import authRoutes from './routes/auth.js'; 
 import adminAuthRoutes from './routes/adminAuth.js'; 
-import cookieRoutes from './routes/cookieRoutes.js'; // <-- 1. Importamos las nuevas rutas de cookies
+import cookieRoutes from './routes/cookieRoutes.js'; 
+import scoresRoutes from './routes/scores.js';
 
 // Configuración de variables de entorno
 dotenv.config();
@@ -29,6 +30,7 @@ app.use(cookieParser()); // <-- Excelente, esto sigue estando antes de las rutas
 app.use('/api/auth', authRoutes); 
 app.use('/api/admin', adminAuthRoutes); // <-- Rutas de autenticación de administradores
 app.use('/api/cookies', cookieRoutes); // <-- 2. Definimos que las rutas usen el prefijo /api/cookies
+app.use('/api/scores', scoresRoutes); // <-- 3. Definimos que las rutas usen el prefijo /api/scores
 
 // --- CONEXIÓN A MONGODB --- //
 mongoose.connect(MONGO_URI)
