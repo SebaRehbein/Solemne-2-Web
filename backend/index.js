@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import adminAuthRoutes from './routes/adminAuth.js'; 
 import cookieRoutes from './routes/cookieRoutes.js'; 
 import scoresRoutes from './routes/scores.js';
+import avatarRoutes from './routes/avatar.js';
 
 // Configuración de variables de entorno
 dotenv.config();
@@ -31,6 +32,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminAuthRoutes); // <-- Rutas de autenticación de administradores
 app.use('/api/cookies', cookieRoutes); // <-- 2. Definimos que las rutas usen el prefijo /api/cookies
 app.use('/api/scores', scoresRoutes); // <-- 3. Definimos que las rutas usen el prefijo /api/scores
+app.use('/api/avatar', avatarRoutes); // <-- Avatares generados via DiceBear (API externa)
 
 // --- CONEXIÓN A MONGODB --- //
 mongoose.connect(MONGO_URI)

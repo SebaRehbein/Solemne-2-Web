@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import api from './api/axios';
+import AvatarEditor from './AvatarEditor';
 import './App.css';
 // ==============================================================================
 // 1. SISTEMA DE PROGRESIÓN Y ESTADÍSTICAS
@@ -258,24 +259,29 @@ class MenuScene extends Phaser.Scene {
     // El overlay deja libre una franja arriba (y=0 a y≈40) para que
     // titleText ("Berry Bad Luck"), ya encogido y movido a y=18, siga visible.
     const clasifTitulo = this.add.text(240, 48, 'CLASIFICATORIA', { fontSize: '20px', fill: '#ffff00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5);
-    const clasifHeader = this.add.text(240, 70, 'PUESTO   NOMBRE          PUNTAJE', { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+    const clasifHeader = this.add.text(252, 70, 'PUESTO   NOMBRE          PUNTAJE', { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
     const clasifLoading = this.add.text(240, 170, 'Cargando...', { fontSize: '16px', fill: '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
 
-    // 10 líneas reutilizables para el top 10 (se les cambia el texto al cargar los datos)
+    // 10 líneas reutilizables para el top 10 (se les cambia el texto al cargar los datos).
+    // El texto se corre 12px a la derecha (x=252) para dejarle espacio al avatar (x=185).
     const clasifFilas = [];
+    const clasifAvatares = [];
     for (let i = 0; i < 10; i++) {
-      const fila = this.add.text(240, 88 + i * 18, '', { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+      const fila = this.add.text(252, 88 + i * 18, '', { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+      const avatarImg = this.add.image(185, 88 + i * 18, '__DEFAULT').setVisible(false).setDisplaySize(16, 16);
       clasifFilas.push(fila);
+      clasifAvatares.push(avatarImg);
     }
 
     const clasifSeparador = this.add.text(240, 272, '··········································', { fontSize: '10px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
-    const clasifMiFila = this.add.text(240, 286, '', { fontSize: '13px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+    const clasifMiFila = this.add.text(252, 286, '', { fontSize: '13px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+    const clasifMiAvatar = this.add.image(185, 286, '__DEFAULT').setVisible(false).setDisplaySize(16, 16);
 
     const btnBackClasif = this.add.text(240, 305, 'ATRÁS', { fontSize: '22px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     const clasifContainer = this.add.container(0, 0, [
       clasifTitulo, clasifHeader, clasifLoading,
-      ...clasifFilas, clasifSeparador, clasifMiFila, btnBackClasif
+      ...clasifFilas, ...clasifAvatares, clasifSeparador, clasifMiFila, clasifMiAvatar, btnBackClasif
     ]);
     clasifContainer.setDepth(10).setVisible(false);
 
@@ -286,14 +292,42 @@ class MenuScene extends Phaser.Scene {
       return `${puestoTxt}${nombreTxt}${puntos}`;
     };
 
+    // Carga dinámicamente las imágenes de avatar como texturas de Phaser.
+    // Las URLs ya apuntan a nuestro propio backend (no a DiceBear
+    // directamente), así que no hay restricciones de CORS al cargarlas.
+    const mostrarAvatares = (entradas) => {
+      const pendientes = entradas.filter(({ username }) => !this.textures.exists(`avatar_${username}`));
+
+      if (pendientes.length > 0) {
+        pendientes.forEach(({ username, url }) => {
+          this.load.image(`avatar_${username}`, url);
+        });
+        this.load.once('complete', () => {
+          entradas.forEach(({ username, imagen }) => {
+            if (this.textures.exists(`avatar_${username}`)) {
+              imagen.setTexture(`avatar_${username}`).setDisplaySize(16, 16).setVisible(true);
+            }
+          });
+        });
+        this.load.start();
+      } else {
+        entradas.forEach(({ username, imagen }) => {
+          imagen.setTexture(`avatar_${username}`).setDisplaySize(16, 16).setVisible(true);
+        });
+      }
+    };
+
     const cargarClasificatoria = async () => {
       clasifLoading.setVisible(true).setText('Cargando...');
       clasifFilas.forEach(f => f.setText(''));
+      clasifAvatares.forEach(a => a.setVisible(false));
       clasifMiFila.setText('');
+      clasifMiAvatar.setVisible(false);
 
+      let top10 = [];
       try {
         const { data } = await api.get('/scores/leaderboard');
-        const top10 = data.leaderboard || [];
+        top10 = data.leaderboard || [];
 
         if (top10.length === 0) {
           clasifLoading.setText('Aún no hay puntajes registrados.');
@@ -310,21 +344,50 @@ class MenuScene extends Phaser.Scene {
 
       // Fila de "tu posición": solo si hay sesión iniciada
       const usuarioActual = this.registry.get('usuarioActual');
+      let miEntrada = null;
+
       if (!usuarioActual) {
         clasifMiFila.setText('Inicia sesión para ver tu posición').setFill('#aaaaaa');
-        return;
+      } else {
+        try {
+          const { data } = await api.get('/scores/me');
+          if (data.posicion === null) {
+            clasifMiFila.setText('Aún no tienes un puntaje registrado, juega una partida').setFill('#aaaaaa');
+          } else {
+            clasifMiFila.setText(formatearFila(data.posicion, data.username, data.puntos)).setFill('#ffcc00');
+            miEntrada = { username: data.username };
+          }
+        } catch (error) {
+          console.error('No se pudo cargar tu progreso:', error);
+          clasifMiFila.setText('No se pudo cargar tu posición.').setFill('#aaaaaa');
+        }
       }
 
+      // Pide al backend, en una sola petición, las URLs de avatar de todos
+      // los jugadores visibles en la tabla (top10 + el propio si aplica).
+      const usernamesUnicos = [...new Set([
+        ...top10.map((e) => e.username),
+        ...(miEntrada ? [miEntrada.username] : [])
+      ])];
+
+      if (usernamesUnicos.length === 0) return;
+
       try {
-        const { data } = await api.get('/scores/me');
-        if (data.posicion === null) {
-          clasifMiFila.setText('Aún no tienes un puntaje registrado, juega una partida').setFill('#aaaaaa');
-        } else {
-          clasifMiFila.setText(formatearFila(data.posicion, data.username, data.puntos)).setFill('#ffcc00');
+        const { data } = await api.get(`/avatar/urls?usernames=${encodeURIComponent(usernamesUnicos.join(','))}`);
+
+        const entradas = top10.map((entry, idx) => ({
+          username: entry.username,
+          url: data.avatars[entry.username],
+          imagen: clasifAvatares[idx]
+        }));
+
+        if (miEntrada && data.avatars[miEntrada.username]) {
+          entradas.push({ username: miEntrada.username, url: data.avatars[miEntrada.username], imagen: clasifMiAvatar });
         }
+
+        mostrarAvatares(entradas.filter((e) => e.url));
       } catch (error) {
-        console.error('No se pudo cargar tu progreso:', error);
-        clasifMiFila.setText('No se pudo cargar tu posición.').setFill('#aaaaaa');
+        console.error('No se pudieron cargar los avatares:', error);
       }
     };
 
@@ -968,6 +1031,9 @@ export default function App() {
   // Estados de autenticación
   const [user, setUser] = useState(null); 
   const [showLogin, setShowLogin] = useState(false);
+  const [hoverAvatar, setHoverAvatar] = useState(false); // controla el overlay de "editar avatar" sobre el círculo del header
+  const [showAvatarEditor, setShowAvatarEditor] = useState(false);
+  const [avatarVersion, setAvatarVersion] = useState(0); // se incrementa al guardar, para forzar recarga de la imagen (evita cache del navegador)
   const [showRegister, setShowRegister] = useState(false);
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [error, setError] = useState('');
@@ -1003,6 +1069,15 @@ export default function App() {
       .catch(() => setUser(null));
   }, []);
 
+  // URL del avatar (DiceBear) del usuario actual. El backend descarga la
+  // imagen externa y la reenvía como propia (evita CORS): el <img> del
+  // frontend siempre apunta a nuestro propio servidor, nunca a DiceBear.
+  // Se calcula directo en el render (no necesita estado ni efecto propio,
+  // ya que es una simple transformación de `user`).
+  const avatarUrl = user
+    ? `http://localhost:3000/api/avatar/image/${encodeURIComponent(user.username)}?v=${avatarVersion}`
+    : null;
+
   // Refleja el usuario actual dentro del registry de Phaser. GameScene lo
   // usa para decidir si manda el puntaje al backend (POST /api/scores) al
   // terminar la partida: si no hay sesión, el juego sigue siendo jugable
@@ -1013,11 +1088,12 @@ export default function App() {
     game.registry.set('usuarioActual', user);
   }, [user]);
 
-  // Bloquea el teclado y el mouse del juego mientras un modal de autenticación esté abierto
+  // Bloquea el teclado y el mouse del juego mientras cualquier modal
+  // (login, registro, o el editor de avatar) esté abierto encima.
   useEffect(() => {
     const game = gameInstanceRef.current;
     if (!game) return;
-    const modalAbierto = showLogin || showRegister;
+    const modalAbierto = showLogin || showRegister || showAvatarEditor;
 
     if (modalAbierto) {
       game.input.enabled = false;
@@ -1026,7 +1102,7 @@ export default function App() {
       game.input.enabled = true;
       if (game.input.keyboard) game.input.keyboard.enabled = true;
     }
-  }, [showLogin, showRegister]);
+  }, [showLogin, showRegister, showAvatarEditor]);
 
   // Manejo de formularios
   const handleChange = (e) => {
@@ -1083,15 +1159,35 @@ export default function App() {
       <div className="auth-sidebar">
         
         {/* Círculo Central/Avatar (Fijo a la derecha) */}
-        <div className="menu-circle">
+        <div
+          className="menu-circle"
+          onMouseEnter={() => user && setHoverAvatar(true)}
+          onMouseLeave={() => setHoverAvatar(false)}
+          onClick={() => user && setShowAvatarEditor(true)}
+          style={user ? { cursor: 'pointer' } : undefined}
+        >
           {user ? (
-            <div className="user-initial">
-              {user.username.charAt(0).toUpperCase()}
-            </div>
+            avatarUrl ? (
+              <img src={avatarUrl} alt={user.username} className="user-avatar-img" />
+            ) : (
+              <div className="user-initial">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+            )
           ) : (
             <svg className="avatar-silhouette" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/>
             </svg>
+          )}
+
+          {/* Overlay de "editar avatar": solo visible con sesión activa y mouse encima.
+              Sin funcionalidad real todavía (se conectará al editor en un próximo avance). */}
+          {user && hoverAvatar && (
+            <div className="avatar-edit-overlay">
+              <svg className="avatar-edit-pencil" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+              </svg>
+            </div>
           )}
         </div>
 
@@ -1153,6 +1249,17 @@ export default function App() {
             </form>
           </div>
         </div>
+      )}
+
+      {showAvatarEditor && user && (
+        <AvatarEditor
+          username={user.username}
+          onClose={() => setShowAvatarEditor(false)}
+          onSaved={() => {
+            setAvatarVersion((v) => v + 1);
+            setShowAvatarEditor(false);
+          }}
+        />
       )}
 
     </div>

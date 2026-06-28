@@ -54,6 +54,29 @@ const userSchema = new mongoose.Schema({
             }
         }
     },
+    // Personalización del avatar (DiceBear, estilo pixel-art).
+    // Cada categoría (hair, clothes, eyes, mouth, glasses, hat, beard,
+    // accessories) guarda { variant, color }. Si todo queda en null o
+    // vacío (jugador que nunca personalizó nada), el avatar sigue
+    // generándose solo a partir del username, igual que antes de que
+    // existiera este editor. Se usa Mixed en vez de declarar cada una
+    // de las 8 categorías a mano: el shape real se valida y normaliza
+    // en PUT /api/avatar/config (backend/routes/avatar.js), no aquí.
+    avatarConfig: {
+        seed: {
+            type: String,
+            default: null // base aleatoria; se regenera con el botón "aleatorio" del editor
+        },
+        hair: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
+        clothes: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
+        eyes: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
+        mouth: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
+        glasses: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
+        hat: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
+        beard: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
+        accessories: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
+        skin: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) }
+    },
     createdAt: {
         type: Date,
         default: Date.now // Guarda automáticamente la fecha y hora de creación
