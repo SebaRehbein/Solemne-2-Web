@@ -132,8 +132,8 @@ Frontend:
 * [x] POST /api/scores → guarda puntaje al terminar partida; protegido con verifyPlayer (lee usuario desde la cookie)
 * [x] GET /api/scores/leaderboard → top 10 puntajes globales (ruta pública)
 * [x] GET /api/scores/me → historial de partidas del jugador autenticado (protegido con verifyPlayer)
-* [ ] Mostrar leaderboard y progreso personal en el frontend
-* [ ] Verificar que las correcciones de la Solemne 2 (puntaje, localStorage, cross-browser, README) funcionan correctamente en la nueva arquitectura fullstack
+* [x] Mostrar leaderboard y progreso personal en el frontend
+* [x] Verificar que las correcciones de la Solemne 2 (puntaje, localStorage, cross-browser, README) funcionan correctamente en la nueva arquitectura fullstack
 
 **Lo que se logró:**
 

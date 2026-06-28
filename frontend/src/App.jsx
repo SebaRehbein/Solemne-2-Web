@@ -187,12 +187,13 @@ class MenuScene extends Phaser.Scene {
       localStorage.setItem('controlesJuego', JSON.stringify(controlesPorDefecto));
     }
 
-    const titleText = this.add.text(240, 70, "Berry Bad Luck", { fontSize: '48px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 }).setOrigin(0.5);
+    const titleText = this.add.text(240, 70, "Berry Bad Luck", { fontSize: '48px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 }).setOrigin(0.5).setDepth(20);
     const btnPlay = this.add.text(240, 150, 'JUGAR', { fontSize: '40px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnPlay.on('pointerdown', () => { this.scene.start('MenuSeleccion'); });
     const btnOptions = this.add.text(240, 220, 'OPCIONES', { fontSize: '32px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const btnClasificatoria = this.add.text(240, 270, 'CLASIFICATORIA', { fontSize: '28px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     
-    [btnPlay, btnOptions].forEach(btn => {
+    [btnPlay, btnOptions, btnClasificatoria].forEach(btn => {
       btn.on('pointerover', () => btn.setScale(1.2));
       btn.on('pointerout', () => btn.setScale(1));
     });
@@ -240,13 +241,106 @@ class MenuScene extends Phaser.Scene {
     
     btnOptions.on('pointerdown', () => {
       if (esperandoTecla) return;
-      titleText.setVisible(false); btnPlay.setVisible(false); btnOptions.setVisible(false);
+      titleText.setVisible(false); btnPlay.setVisible(false); btnOptions.setVisible(false); btnClasificatoria.setVisible(false);
       optionsContainer.setVisible(true);
     });
     btnBack.on('pointerdown', () => {
       if (esperandoTecla) return;
       optionsContainer.setVisible(false);
-      titleText.setVisible(true); btnPlay.setVisible(true); btnOptions.setVisible(true);
+      titleText.setVisible(true); btnPlay.setVisible(true); btnOptions.setVisible(true); btnClasificatoria.setVisible(true);
+    });
+
+    // ==========================================================
+    // PANTALLA DE CLASIFICATORIA (top 10 + posición personal)
+    // Mismo patrón que optionsContainer: una capa que se muestra
+    // encima del mismo fondo del menú, sin cambiar de escena.
+    // ==========================================================
+    // El overlay deja libre una franja arriba (y=0 a y≈40) para que
+    // titleText ("Berry Bad Luck"), ya encogido y movido a y=18, siga visible.
+    const clasifTitulo = this.add.text(240, 48, 'CLASIFICATORIA', { fontSize: '20px', fill: '#ffff00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5);
+    const clasifHeader = this.add.text(240, 70, 'PUESTO   NOMBRE          PUNTAJE', { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+    const clasifLoading = this.add.text(240, 170, 'Cargando...', { fontSize: '16px', fill: '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+
+    // 10 líneas reutilizables para el top 10 (se les cambia el texto al cargar los datos)
+    const clasifFilas = [];
+    for (let i = 0; i < 10; i++) {
+      const fila = this.add.text(240, 88 + i * 18, '', { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+      clasifFilas.push(fila);
+    }
+
+    const clasifSeparador = this.add.text(240, 272, '··········································', { fontSize: '10px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
+    const clasifMiFila = this.add.text(240, 286, '', { fontSize: '13px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+
+    const btnBackClasif = this.add.text(240, 305, 'ATRÁS', { fontSize: '22px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    const clasifContainer = this.add.container(0, 0, [
+      clasifTitulo, clasifHeader, clasifLoading,
+      ...clasifFilas, clasifSeparador, clasifMiFila, btnBackClasif
+    ]);
+    clasifContainer.setDepth(10).setVisible(false);
+
+    // Formatea una fila de la tabla con columnas alineadas (estilo monoespaciado)
+    const formatearFila = (puesto, nombre, puntos) => {
+      const puestoTxt = `#${puesto}`.padEnd(8, ' ');
+      const nombreTxt = (nombre.length > 12 ? nombre.slice(0, 12) : nombre).padEnd(15, ' ');
+      return `${puestoTxt}${nombreTxt}${puntos}`;
+    };
+
+    const cargarClasificatoria = async () => {
+      clasifLoading.setVisible(true).setText('Cargando...');
+      clasifFilas.forEach(f => f.setText(''));
+      clasifMiFila.setText('');
+
+      try {
+        const { data } = await api.get('/scores/leaderboard');
+        const top10 = data.leaderboard || [];
+
+        if (top10.length === 0) {
+          clasifLoading.setText('Aún no hay puntajes registrados.');
+        } else {
+          clasifLoading.setVisible(false);
+          top10.forEach((entry, idx) => {
+            clasifFilas[idx].setText(formatearFila(idx + 1, entry.username, entry.puntos));
+          });
+        }
+      } catch (error) {
+        console.error('No se pudo cargar el leaderboard:', error);
+        clasifLoading.setText('No se pudo cargar la clasificatoria.');
+      }
+
+      // Fila de "tu posición": solo si hay sesión iniciada
+      const usuarioActual = this.registry.get('usuarioActual');
+      if (!usuarioActual) {
+        clasifMiFila.setText('Inicia sesión para ver tu posición').setFill('#aaaaaa');
+        return;
+      }
+
+      try {
+        const { data } = await api.get('/scores/me');
+        if (data.posicion === null) {
+          clasifMiFila.setText('Aún no tienes un puntaje registrado, juega una partida').setFill('#aaaaaa');
+        } else {
+          clasifMiFila.setText(formatearFila(data.posicion, data.username, data.puntos)).setFill('#ffcc00');
+        }
+      } catch (error) {
+        console.error('No se pudo cargar tu progreso:', error);
+        clasifMiFila.setText('No se pudo cargar tu posición.').setFill('#aaaaaa');
+      }
+    };
+
+    btnClasificatoria.on('pointerdown', () => {
+      if (esperandoTecla) return;
+      btnPlay.setVisible(false); btnOptions.setVisible(false); btnClasificatoria.setVisible(false);
+      // El título se encoge y sube (escala, no fontSize: Phaser no anima fontSize directamente)
+      this.tweens.add({ targets: titleText, scale: 0.45, y: 18, duration: 250, ease: 'Power1' });
+      clasifContainer.setVisible(true);
+      cargarClasificatoria();
+    });
+
+    btnBackClasif.on('pointerdown', () => {
+      clasifContainer.setVisible(false);
+      this.tweens.add({ targets: titleText, scale: 1, y: 70, duration: 250, ease: 'Power1' });
+      btnPlay.setVisible(true); btnOptions.setVisible(true); btnClasificatoria.setVisible(true);
     });
   }
 }
