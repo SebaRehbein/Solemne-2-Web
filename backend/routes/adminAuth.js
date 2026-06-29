@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { verifyAdmin } from '../middlewares/authMiddleware.js'; // <-- NUEVO: Importamos el middleware de admin
+import { ADMIN_JWT_SECRET } from '../config/jwt.js';
 
 const router = express.Router();
 
@@ -29,15 +30,17 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Credenciales inválidas.' });
         }
 
-        // 4. Generar el JWT
-        const jwtSecret = process.env.JWT_SECRET || 'secreto_de_respaldo';
+        // 4. Generar el JWT con el secreto EXCLUSIVO de admin (distinto
+        // al de jugador: ver config/jwt.js). Defensa en profundidad: un
+        // token de jugador nunca podría validarse como admin, ni
+        // viceversa, aunque alguien manipulara el campo role a mano.
         const payload = {
             id: user._id,
             role: user.role
         };
 
         // El token para administradores suele tener una expiración más corta por seguridad
-        const token = jwt.sign(payload, jwtSecret, { expiresIn: '4h' });
+        const token = jwt.sign(payload, ADMIN_JWT_SECRET, { expiresIn: '4h' });
 
         // 5. Enviar respuesta: OJO, aquí NO usamos res.cookie
         // Devolvemos el token directamente en el JSON para que el frontend lo guarde

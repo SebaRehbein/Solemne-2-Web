@@ -1,12 +1,16 @@
 import jwt from 'jsonwebtoken';
+import { JWT_SECRET, ADMIN_JWT_SECRET } from '../config/jwt.js';
 
 // ==========================================================
 // Middleware para verificar jugadores (Cookies httpOnly)
 // ==========================================================
 export const verifyPlayer = (req, res, next) => {
     try {
-        // 1. Extraer el token de las cookies
-        const token = req.cookies.sessionToken;
+        // 1. Extraer el token de las cookies firmadas (signedCookies, no
+        // cookies: la cookie se setea con signed:true en routes/auth.js,
+        // así que solo es válida si pasa la verificación de firma de
+        // cookie-parser con COOKIE_SECRET, ver index.js)
+        const token = req.signedCookies.sessionToken;
 
         // 2. Si no hay token, rechazamos la petición
         if (!token) {
@@ -16,8 +20,7 @@ export const verifyPlayer = (req, res, next) => {
         }
 
         // 3. Verificar el token con nuestra clave secreta
-        const jwtSecret = process.env.JWT_SECRET || 'secreto_de_respaldo';
-        const decoded = jwt.verify(token, jwtSecret);
+        const decoded = jwt.verify(token, JWT_SECRET);
 
         // 4. Inyectamos los datos descifrados (id, role) en el objeto 'req'
         req.user = decoded;
@@ -51,8 +54,8 @@ export const verifyAdmin = (req, res, next) => {
         const token = authHeader.split(' ')[1];
 
         // 4. Verificar la autenticidad del token usando la clave secreta
-        const jwtSecret = process.env.JWT_SECRET || 'secreto_de_respaldo';
-        const decoded = jwt.verify(token, jwtSecret);
+        // exclusiva de admin (distinta a la de jugador: ver config/jwt.js)
+        const decoded = jwt.verify(token, ADMIN_JWT_SECRET);
 
         // 5. VALIDACIÓN CRÍTICA: Asegurar que el rol sea exclusivamente 'admin'
         if (decoded.role !== 'admin') {

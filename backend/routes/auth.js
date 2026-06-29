@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { verifyPlayer } from '../middlewares/authMiddleware.js';
+import { JWT_SECRET } from '../config/jwt.js';
 
 const router = express.Router();
 
@@ -34,20 +35,20 @@ router.post('/register', async (req, res) => {
 
         await newUser.save();
 
-        const jwtSecret = process.env.JWT_SECRET || 'secreto_de_respaldo';
         const payload = {
             id: newUser._id,
             role: newUser.role
         };
 
-        const token = jwt.sign(payload, jwtSecret, { expiresIn: '1d' });
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
 
         // Nota: Cambiado a 'sessionToken' para mantener consistencia con el login
         res.cookie('sessionToken', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            maxAge: 1000 * 60 * 60 * 24
+            maxAge: 1000 * 60 * 60 * 24,
+            signed: true // firmada con COOKIE_SECRET (ver index.js): el navegador no puede alterar su contenido sin invalidarla
         });
 
         res.status(201).json({
@@ -93,20 +94,20 @@ router.post('/login', async (req, res) => {
         }
 
         // 4. Generación del JSON Web Token (JWT)
-        const jwtSecret = process.env.JWT_SECRET || 'secreto_de_respaldo';
         const payload = {
             id: user._id,
             role: user.role // Aquí viajará el rol del usuario ('player' o 'admin')
         };
 
-        const token = jwt.sign(payload, jwtSecret, { expiresIn: '1d' });
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
 
         // 5. Configurar la cookie httpOnly con el nombre 'sessionToken'
         res.cookie('sessionToken', token, {
             httpOnly: true, // Protege contra vulnerabilidades XSS
             secure: process.env.NODE_ENV === 'production', // True solo bajo HTTPS en producción
             sameSite: 'strict', // Protege contra ataques CSRF
-            maxAge: 1000 * 60 * 60 * 24 // Duración de 1 día
+            maxAge: 1000 * 60 * 60 * 24, // Duración de 1 día
+            signed: true // firmada con COOKIE_SECRET (ver index.js): el navegador no puede alterar su contenido sin invalidarla
         });
 
         // 6. Enviar respuesta exitosa sin datos sensibles

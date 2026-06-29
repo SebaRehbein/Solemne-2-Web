@@ -1,6 +1,15 @@
+// dotenv/config ejecuta dotenv.config() automáticamente al importarse.
+// Tiene que ser el PRIMER import del archivo, sin nada antes: en ES
+// modules, todos los imports se cargan en un recorrido depth-first
+// ANTES de ejecutar cualquier código del archivo (incluida una llamada
+// a dotenv.config() escrita en la línea siguiente) — así que escribir
+// "import dotenv from 'dotenv'; dotenv.config();" arriba de los demás
+// imports NO alcanza para garantizar el orden. Ver:
+// https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
+import 'dotenv/config';
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose'; 
 import bcrypt from 'bcrypt';
@@ -10,9 +19,7 @@ import adminAuthRoutes from './routes/adminAuth.js';
 import cookieRoutes from './routes/cookieRoutes.js'; 
 import scoresRoutes from './routes/scores.js';
 import avatarRoutes from './routes/avatar.js';
-
-// Configuración de variables de entorno
-dotenv.config();
+import { COOKIE_SECRET } from './config/jwt.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,7 +32,11 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(cookieParser()); // <-- Excelente, esto sigue estando antes de las rutas
+// cookieParser(COOKIE_SECRET) firma las cookies que se setean con
+// { signed: true }: el navegador no puede modificar su contenido sin
+// invalidar la firma. Esto es una capa adicional, independiente de que
+// el propio valor de la cookie (el JWT) ya esté firmado por su cuenta.
+app.use(cookieParser(COOKIE_SECRET));
 
 // --- RUTAS DE LA API --- //
 app.use('/api/auth', authRoutes); 
