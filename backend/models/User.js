@@ -75,7 +75,16 @@ const userSchema = new mongoose.Schema({
         hat: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
         beard: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
         accessories: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
-        skin: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) }
+        skin: { type: mongoose.Schema.Types.Mixed, default: () => ({ variant: null, color: null }) },
+        // Fecha de la última vez que se guardó una personalización. Se usa
+        // como parte de la URL de la imagen del avatar (?t=<timestamp>),
+        // para invalidar el cache del navegador justo cuando cambia algo,
+        // sin depender de un contador en memoria (que se pierde al recargar
+        // la página) ni desactivar el cache por completo.
+        actualizadoEn: {
+            type: Date,
+            default: null
+        }
     },
     createdAt: {
         type: Date,

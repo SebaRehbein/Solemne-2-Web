@@ -295,24 +295,31 @@ class MenuScene extends Phaser.Scene {
     // Carga dinámicamente las imágenes de avatar como texturas de Phaser.
     // Las URLs ya apuntan a nuestro propio backend (no a DiceBear
     // directamente), así que no hay restricciones de CORS al cargarlas.
+    //
+    // La clave de textura se deriva de la URL completa (no solo del
+    // username): la URL incluye ?t=<timestamp real de MongoDB>, así que
+    // si el jugador personaliza su avatar, la URL cambia y se carga una
+    // textura nueva — en vez de reutilizar para siempre la primera
+    // textura que Phaser cacheó con esa clave en la sesión actual.
     const mostrarAvatares = (entradas) => {
-      const pendientes = entradas.filter(({ username }) => !this.textures.exists(`avatar_${username}`));
+      const conClave = entradas.map((e) => ({ ...e, claveTextura: `avatar_${e.url}` }));
+      const pendientes = conClave.filter(({ claveTextura }) => !this.textures.exists(claveTextura));
 
       if (pendientes.length > 0) {
-        pendientes.forEach(({ username, url }) => {
-          this.load.image(`avatar_${username}`, url);
+        pendientes.forEach(({ claveTextura, url }) => {
+          this.load.image(claveTextura, url);
         });
         this.load.once('complete', () => {
-          entradas.forEach(({ username, imagen }) => {
-            if (this.textures.exists(`avatar_${username}`)) {
-              imagen.setTexture(`avatar_${username}`).setDisplaySize(16, 16).setVisible(true);
+          conClave.forEach(({ claveTextura, imagen }) => {
+            if (this.textures.exists(claveTextura)) {
+              imagen.setTexture(claveTextura).setDisplaySize(16, 16).setVisible(true);
             }
           });
         });
         this.load.start();
       } else {
-        entradas.forEach(({ username, imagen }) => {
-          imagen.setTexture(`avatar_${username}`).setDisplaySize(16, 16).setVisible(true);
+        conClave.forEach(({ claveTextura, imagen }) => {
+          imagen.setTexture(claveTextura).setDisplaySize(16, 16).setVisible(true);
         });
       }
     };
@@ -1033,7 +1040,12 @@ export default function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [hoverAvatar, setHoverAvatar] = useState(false); // controla el overlay de "editar avatar" sobre el círculo del header
   const [showAvatarEditor, setShowAvatarEditor] = useState(false);
-  const [avatarVersion, setAvatarVersion] = useState(0); // se incrementa al guardar, para forzar recarga de la imagen (evita cache del navegador)
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  // Se incrementa al guardar una personalización, solo para disparar el
+  // useEffect de abajo de nuevo (no para construir la URL: el cache-buster
+  // real es el timestamp avatarConfig.actualizadoEn, que vive en MongoDB,
+  // no en memoria de React, así que sobrevive a un F5 de la página).
+  const [avatarRefreshTrigger, setAvatarRefreshTrigger] = useState(0);
   const [showRegister, setShowRegister] = useState(false);
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [error, setError] = useState('');
@@ -1069,14 +1081,27 @@ export default function App() {
       .catch(() => setUser(null));
   }, []);
 
-  // URL del avatar (DiceBear) del usuario actual. El backend descarga la
-  // imagen externa y la reenvía como propia (evita CORS): el <img> del
-  // frontend siempre apunta a nuestro propio servidor, nunca a DiceBear.
-  // Se calcula directo en el render (no necesita estado ni efecto propio,
-  // ya que es una simple transformación de `user`).
-  const avatarUrl = user
-    ? `http://localhost:3000/api/avatar/image/${encodeURIComponent(user.username)}?v=${avatarVersion}`
-    : null;
+  // Pide al backend la URL del avatar del usuario actual, vía la misma
+  // ruta /avatar/urls que usa el leaderboard. El backend incluye en la
+  // URL el timestamp real de la última personalización guardada
+  // (avatarConfig.actualizadoEn, en MongoDB), así que el cache del
+  // navegador se invalida justo cuando cambia algo — sin importar si la
+  // página se recargó entre medio, a diferencia de un contador en memoria.
+  useEffect(() => {
+    if (!user) return; // sin sesión no hay avatar que pedir; avatarUrl ya empieza en null
+
+    let cancelado = false;
+
+    api.get(`/avatar/urls?usernames=${encodeURIComponent(user.username)}`)
+      .then((response) => {
+        if (!cancelado) setAvatarUrl(response.data.avatars[user.username] || null);
+      })
+      .catch(() => {
+        if (!cancelado) setAvatarUrl(null);
+      });
+
+    return () => { cancelado = true; };
+  }, [user, avatarRefreshTrigger]);
 
   // Refleja el usuario actual dentro del registry de Phaser. GameScene lo
   // usa para decidir si manda el puntaje al backend (POST /api/scores) al
@@ -1256,7 +1281,7 @@ export default function App() {
           username={user.username}
           onClose={() => setShowAvatarEditor(false)}
           onSaved={() => {
-            setAvatarVersion((v) => v + 1);
+            setAvatarRefreshTrigger((t) => t + 1);
             setShowAvatarEditor(false);
           }}
         />

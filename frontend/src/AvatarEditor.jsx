@@ -63,6 +63,45 @@ export default function AvatarEditor({ username, onClose, onSaved }) {
             .finally(() => setLoadingOpciones(false));
     }, []);
 
+    // Carga la personalización YA GUARDADA del jugador, para que el editor
+    // arranque mostrando lo que eligió la última vez, no siempre vacío.
+    // Sin esto, la vista previa al abrir el editor mostraba "el avatar
+    // antiguo" (en realidad: el avatar sin ninguna personalización),
+    // aunque ya hubiera una guardada en MongoDB.
+    useEffect(() => {
+        let cancelado = false;
+
+        api.get('/avatar/config')
+            .then((res) => {
+                if (cancelado) return;
+                const guardada = res.data.avatarConfig;
+                if (!guardada) return;
+                // Combina con la base "vacía" por si el documento es de un
+                // usuario antiguo al que le falte alguna categoría nueva.
+                setConfig((prev) => ({
+                    ...prev,
+                    ...guardada,
+                    // Mongoose puede devolver subdocumentos sin algún campo
+                    // si fueron creados antes de que esa categoría existiera;
+                    // nos asegura que siempre haya {variant, color} completos.
+                    ...Object.fromEntries(
+                        Object.keys(prev)
+                            .filter((k) => k !== 'seed')
+                            .map((categoria) => [
+                                categoria,
+                                { ...CATEGORIA_VACIA, ...(guardada[categoria] || {}) }
+                            ])
+                    )
+                }));
+            })
+            .catch(() => {
+                // Si falla, el editor sigue funcionando con la config vacía
+                // por defecto; no es un error bloqueante para personalizar.
+            });
+
+        return () => { cancelado = true; };
+    }, []);
+
     // La vista previa se recalcula sola: cada cambio en `config` cambia la
     // URL (vía query string), y el navegador vuelve a pedir la imagen.
     const previewUrl = `http://localhost:3000/api/avatar/image/${encodeURIComponent(username)}?preview=${encodeURIComponent(JSON.stringify(config))}`;

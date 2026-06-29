@@ -87,6 +87,32 @@ router.get('/options', (req, res) => {
 });
 
 // ==========================================
+// ==========================================
+// GET /api/avatar/config
+// Devuelve la personalización actualmente guardada del jugador
+// autenticado. La usa el editor del frontend al abrirse, para partir
+// de lo que ya está guardado en vez de arrancar siempre vacío (que
+// haría ver "el avatar antiguo" en la vista previa hasta que el
+// jugador volviera a tocar cada categoría a mano).
+// Protegida con verifyPlayer: cada jugador solo puede ver su propia config.
+// ==========================================
+router.get('/config', verifyPlayer, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('avatarConfig');
+
+        if (!user) {
+            return res.status(404).json({ message: 'El usuario ya no existe en el sistema.' });
+        }
+
+        return res.status(200).json({ avatarConfig: user.avatarConfig });
+
+    } catch (error) {
+        console.error('Error crítico en GET /api/avatar/config:', error);
+        return res.status(500).json({ message: 'Error interno del servidor al obtener la personalización.' });
+    }
+});
+
+// ==========================================
 // PUT /api/avatar/config
 // Guarda la personalización elegida por el jugador autenticado.
 // Protegida con verifyPlayer: solo se puede editar el propio avatar.
@@ -114,6 +140,12 @@ router.put('/config', verifyPlayer, async (req, res) => {
                 color: valor?.color ?? null
             };
         }
+
+        // Sello de tiempo real (persiste en MongoDB, no en memoria del
+        // navegador): se usa para invalidar el cache de la imagen del
+        // avatar justo cuando cambia, sin depender de un contador que se
+        // pierde al recargar la página.
+        nuevaConfig.actualizadoEn = new Date();
 
         user.avatarConfig = nuevaConfig;
         await user.save();
@@ -183,29 +215,45 @@ router.get('/image/:username', async (req, res) => {
 // el frontend debe usar como src de <img> o como textura en Phaser.
 // Ruta pública: no expone datos sensibles, solo construye URLs.
 // ==========================================
-router.get('/urls', (req, res) => {
-    const { usernames } = req.query;
+router.get('/urls', async (req, res) => {
+    try {
+        const { usernames } = req.query;
 
-    if (!usernames) {
-        return res.status(400).json({ message: 'Falta el parámetro usernames.' });
-    }
+        if (!usernames) {
+            return res.status(400).json({ message: 'Falta el parámetro usernames.' });
+        }
 
-    const lista = usernames.split(',').filter(Boolean);
+        const lista = usernames.split(',').filter(Boolean);
 
-    if (lista.length === 0) {
-        return res.status(400).json({ message: 'usernames no puede estar vacío.' });
-    }
+        if (lista.length === 0) {
+            return res.status(400).json({ message: 'usernames no puede estar vacío.' });
+        }
 
-    const avatars = lista.reduce((acc, username) => {
-        // URL absoluta: Phaser (this.load.image) resuelve URLs relativas
-        // contra el origen del frontend, no del backend, así que aquí
-        // construimos la ruta completa apuntando a nuestro propio servidor.
+        // Trae el sello de tiempo de la última personalización de cada
+        // usuario, para poder invalidar el cache de su imagen solo cuando
+        // de verdad cambió (ver PUT /config más arriba).
+        const usuarios = await User.find({ username: { $in: lista } }).select('username avatarConfig.actualizadoEn');
+        const timestamps = usuarios.reduce((acc, u) => {
+            acc[u.username] = u.avatarConfig?.actualizadoEn?.getTime() || 0;
+            return acc;
+        }, {});
+
         const host = `${req.protocol}://${req.get('host')}`;
-        acc[username] = `${host}/api/avatar/image/${encodeURIComponent(username)}`;
-        return acc;
-    }, {});
+        const avatars = lista.reduce((acc, username) => {
+            // URL absoluta: Phaser (this.load.image) resuelve URLs relativas
+            // contra el origen del frontend, no del backend, así que aquí
+            // construimos la ruta completa apuntando a nuestro propio servidor.
+            const t = timestamps[username] || 0;
+            acc[username] = `${host}/api/avatar/image/${encodeURIComponent(username)}?t=${t}`;
+            return acc;
+        }, {});
 
-    return res.status(200).json({ avatars });
+        return res.status(200).json({ avatars });
+
+    } catch (error) {
+        console.error('Error crítico en GET /api/avatar/urls:', error);
+        return res.status(500).json({ message: 'Error interno del servidor al obtener las URLs de avatar.' });
+    }
 });
 
 export default router;

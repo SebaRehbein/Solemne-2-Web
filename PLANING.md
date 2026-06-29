@@ -165,8 +165,8 @@ Frontend:
 - mongo (imagen oficial MongoDB, volumen persistente)
 * [x] Variables de entorno con .env (.env.example en el repo, .env en .gitignore):
 - MONGO_URI, JWT_SECRET, ADMIN_JWT_SECRET (puede ser el mismo secret con claims distintos), COOKIE_SECRET, NODE_ENV
-* [ ] Verificar que las cookies httpOnly funcionan correctamente con Docker (sameSite y secure según NODE_ENV)
-* [ ] Probar docker compose up --build y verificar que el flujo completo funciona
+* [x] Verificar que las cookies httpOnly funcionan correctamente con Docker (sameSite y secure según NODE_ENV)
+* [x] Probar docker compose up --build y verificar que el flujo completo funciona
 
 **Lo que se logró:**
 

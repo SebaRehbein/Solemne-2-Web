@@ -70,7 +70,7 @@ export default function AdminDashboard() {
                                     <th>Usuario</th>
                                     <th>Email</th>
                                     <th>Nivel</th>
-                                    <th>Puntaje</th>
+                                    <th>Mejor puntaje</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -79,7 +79,7 @@ export default function AdminDashboard() {
                                         <td>{player.username}</td>
                                         <td>{player.email}</td>
                                         <td>{player.progress?.nivel ?? '-'}</td>
-                                        <td>{player.progress?.puntaje ?? '-'}</td>
+                                        <td>{player.progress?.mejorPuntaje?.puntos ?? '-'}</td>
                                     </tr>
                                 ))}
                             </tbody>
