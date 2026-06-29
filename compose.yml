@@ -1,0 +1,81 @@
+# ============================================================
+# compose.yml — orquesta los 3 servicios del proyecto:
+#   mongo    -> base de datos (imagen oficial, volumen persistente)
+#   backend  -> API Node/Express (depende de mongo)
+#   frontend -> build estático servido por Nginx (depende de backend)
+#
+# Uso:
+#   docker compose up --build
+#   docker compose down            # detiene y elimina los contenedores
+#   docker compose down -v         # además borra el volumen de Mongo (resetea la BD)
+# ============================================================
+
+services:
+
+  # ---------------------------------------------------------
+  # MongoDB: imagen oficial, sin Dockerfile propio (no hace
+  # falta: no compilamos nada, solo usamos la imagen tal cual).
+  # ---------------------------------------------------------
+  mongo:
+    image: mongo:7
+    container_name: berrybadluck-mongo
+    restart: unless-stopped
+    volumes:
+      # Volumen nombrado: los datos sobreviven aunque el contenedor
+      # se borre y se recree (docker compose down sin -v lo conserva).
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo "db.runCommand('ping').ok" | mongosh --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # No se expone el puerto 27017 al host: solo el backend (en la
+    # misma red de Docker) necesita hablar con Mongo, por nombre de
+    # servicio (mongo:27017). Mantenerlo cerrado al host es más seguro.
+
+  # ---------------------------------------------------------
+  # Backend: Node/Express. Espera a que mongo esté realmente
+  # aceptando conexiones (no solo "iniciado") antes de arrancar.
+  # ---------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: berrybadluck-backend
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      # Sobrescribe lo que venga en backend/.env: dentro de la red de
+      # Docker, Mongo no se llama "127.0.0.1", se llama "mongo" (el
+      # nombre del servicio above). Si backend/.env trae un MONGO_URI
+      # apuntando a localhost, esta línea se asegura de que el
+      # contenedor siempre use el host correcto.
+      MONGO_URI: mongodb://mongo:27017/BerryBadLuck_db
+    ports:
+      - "3000:3000"
+
+  # ---------------------------------------------------------
+  # Frontend: build estático de React/Vite, servido por Nginx.
+  # Depende del backend solo en orden de arranque (Nginx no
+  # necesita que el backend ya responda para servir archivos
+  # estáticos; las llamadas a la API las hace el navegador del
+  # usuario final, no este contenedor).
+  # ---------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: berrybadluck-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  mongo_data:

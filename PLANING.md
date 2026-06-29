@@ -159,7 +159,7 @@ Frontend:
 
 * [x] Escribir frontend/Dockerfile (build estático + servidor Nginx o similar)
 * [x] Escribir backend/Dockerfile (Node.js, exponer puerto, variables de entorno)
-* [ ] Escribir compose.yml que orqueste tres servicios:
+* [X] Escribir compose.yml que orqueste tres servicios:
 - frontend (depende de backend)
 - backend (depende de mongo)
 - mongo (imagen oficial MongoDB, volumen persistente)
