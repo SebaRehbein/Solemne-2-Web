@@ -160,6 +160,28 @@ class Frog extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y,
 // ==============================================================================
 // ESCENA 1: MENÚ PRINCIPAL
 // ==============================================================================
+class NivelUnoScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'NivelUnoScene' });
+  }
+
+  init(data) {
+    this.personajeSeleccionado = data.personaje || 'Shuri';
+  }
+
+  preload() {
+    // Vacío por ahora
+  }
+
+  create() {
+    console.log("¡Llegamos con éxito al Nivel 1! Personaje:", this.personajeSeleccionado);
+  }
+
+  update() {
+    // Vacío por ahora
+  }
+}
+
 class MenuScene extends Phaser.Scene {
   constructor() { super({ key: 'MenuScene' }); }
   preload() {
@@ -1064,7 +1086,7 @@ export default function App() {
         default: 'arcade',
         arcade: { gravity: { y: 800 }, debug: false }
       },
-      scene: [MenuScene, MenuSeleccion, MejorasScene, GameScene, PauseScene] 
+      scene: [MenuScene, MenuSeleccion, MejorasScene, NivelUnoScene, GameScene, PauseScene] 
     };
     const game = new Phaser.Game(config);
     gameInstanceRef.current = game;
