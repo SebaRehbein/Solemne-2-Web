@@ -178,7 +178,7 @@ Frontend:
 
 **Tareas planificadas:**
 
-* [ ] Backend: pruebas unitarias con Jest o Vitest
+* [x] Backend: pruebas unitarias con Jest o Vitest
 - Test de POST /api/auth/register → verifica que se crea el usuario y se setea la cookie
 - Test de POST /api/auth/login → verifica cookie en la respuesta para jugadores
 - Test de POST /api/admin/login → verifica que retorna JWT en el body (sin cookie)
