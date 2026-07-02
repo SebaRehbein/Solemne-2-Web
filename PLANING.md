@@ -202,8 +202,8 @@ Frontend:
 **Tareas planificadas:**
 
 * [x] Pruebas de integración end-to-end: registro → login (cookie) → puntaje → ranking
-* [ ] Verificar que el CI/CD de GitHub Actions pasa correctamente (linter + tests + build)
-* [ ] Completar README.md:
+* [x] Verificar que el CI/CD de GitHub Actions pasa correctamente (linter + tests + build)
+* [x] Completar README.md:
 - Título y descripción del proyecto
 - Instrucciones de ejecución local (frontend y backend por separado)
 - Instrucciones con Docker Compose (docker compose up)
