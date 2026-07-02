@@ -185,7 +185,7 @@ Frontend:
 - Test de middleware verifyPlayer → falla si no hay cookie; pasa si la cookie es válida
 - Test de middleware verifyAdmin → falla si no hay header; pasa si el token es válido
 - Test de POST /api/scores → rechaza sin cookie, acepta con cookie válida
-* [ ] Configurar GitHub Actions en .github/workflows/main.yml:
+* [x] Configurar GitHub Actions en .github/workflows/main.yml:
 - Trigger: push a cualquier rama
 - Job 1: linter (eslint) en frontend y backend
 - Job 2: pruebas unitarias frontend
