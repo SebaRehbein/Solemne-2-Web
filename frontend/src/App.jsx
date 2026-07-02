@@ -1293,16 +1293,35 @@ class PauseScene extends Phaser.Scene {
 // ==============================================================================
 // COMPONENTE REACT PRINCIPAL
 // ==============================================================================
+const CONTROLES_POR_DEFECTO = { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
+
+// Escenas "de menú": mientras alguna de estas esté activa se muestra el
+// botón de pantalla completa. NivelUnoScene y GameScene quedan afuera a
+// propósito (se juega activamente ahí); si el jugador pausa, GameScene deja
+// de estar "activa" (queda en pausa) y PauseScene toma su lugar, así que el
+// botón reaparece sin lógica adicional.
+const ESCENAS_CON_BOTON_FULLSCREEN = ['MenuScene', 'MenuSeleccion', 'MejorasScene', 'PauseScene'];
+
 export default function App() {
   const gameRef = useRef(null);
   const gameInstanceRef = useRef(null);
+  const gameScreenRef = useRef(null);
 
   // Estados de autenticación
-  const [user, setUser] = useState(null); 
+  const [user, setUser] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [hoverAvatar, setHoverAvatar] = useState(false); // controla el overlay de "editar avatar" sobre el círculo del header
   const [showAvatarEditor, setShowAvatarEditor] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFullscreenBtn, setShowFullscreenBtn] = useState(true);
+  const [controles, setControles] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('controlesJuego')) || CONTROLES_POR_DEFECTO;
+    } catch {
+      return CONTROLES_POR_DEFECTO;
+    }
+  });
   // Se incrementa al guardar una personalización, solo para disparar el
   // useEffect de abajo de nuevo (no para construir la URL: el cache-buster
   // real es el timestamp avatarConfig.actualizadoEn, que vive en MongoDB,
@@ -1391,6 +1410,47 @@ export default function App() {
     }
   }, [showLogin, showRegister, showAvatarEditor]);
 
+  // Sondea cada 250ms qué escenas de Phaser están realmente corriendo (no
+  // hay un evento global de "cambio de escena" en Phaser al que suscribirse
+  // desde React, así que un polling liviano es más simple que enganchar
+  // listeners individuales en cada escena). Con eso decide si el botón de
+  // pantalla completa debe verse, y aprovecha el mismo tick para mantener
+  // el panel de controles sincronizado si el jugador los reconfigura.
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      const game = gameInstanceRef.current;
+      if (!game) return;
+
+      const escenasActivas = game.scene.getScenes(true).map((s) => s.scene.key);
+      setShowFullscreenBtn(escenasActivas.some((key) => ESCENAS_CON_BOTON_FULLSCREEN.includes(key)));
+
+      try {
+        const guardados = JSON.parse(localStorage.getItem('controlesJuego'));
+        if (guardados) setControles(guardados);
+      } catch {
+        // localStorage corrupto: se conserva el último valor válido conocido
+      }
+    }, 250);
+
+    return () => clearInterval(intervalo);
+  }, []);
+
+  // Mantiene el ícono del botón sincronizado con el estado real de pantalla
+  // completa, incluyendo cuando el navegador la cierra por su cuenta (ESC).
+  useEffect(() => {
+    const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      gameScreenRef.current?.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.();
+    }
+  };
+
   // Manejo de formularios
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -1442,6 +1502,16 @@ export default function App() {
   return (
     
       <div className="game-wrapper">
+      {/* PANEL DE CONTROLES (fijo a la esquina superior izquierda) */}
+      <div className="controls-sidebar">
+        <h3 className="controls-title">Controles</h3>
+        <ul className="controls-list">
+          <li><span className="key">{controles.IZQUIERDA}</span><span className="key">{controles.DERECHA}</span> Moverse</li>
+          <li><span className="key">{controles.ARRIBA}</span> Saltar</li>
+          <li><span className="key">Clic</span> Disparar</li>
+        </ul>
+      </div>
+
       {/* INTERFAZ DE AUTENTICACIÓN LATERAL */}
       <div className="auth-sidebar">
         
@@ -1496,8 +1566,20 @@ export default function App() {
       </div>
 
       {/* CONTENEDOR DEL JUEGO PHASER */}
-      <h2 style={{ marginTop: '20px' }}>Solemne 2 - Fusión Completa (Con Pausa)</h2>
-      <div ref={gameRef} style={{ border: '4px solid #333', borderRadius: '8px', overflow: 'hidden' }}></div>
+      <h2 style={{ marginTop: '20px' }}>Berry Bad Luck</h2>
+      <div ref={gameScreenRef} className="game-screen-wrapper">
+        <div ref={gameRef} className="game-canvas-container" style={{ border: '4px solid #333', borderRadius: '8px', overflow: 'hidden' }}></div>
+        {showFullscreenBtn && (
+          <button
+            type="button"
+            className="fullscreen-btn"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+          >
+            {isFullscreen ? '⤢' : '⛶'}
+          </button>
+        )}
+      </div>
       <p style={{ marginTop: '10px' }}>Derrota al jefe para ganar EXP. Vuelve al menú para mejorar tus stats.</p>
       <p style={{ marginTop: '10px' }}>Presiona <strong>ESC</strong> para pausar el juego. Buena suerte.</p>
 

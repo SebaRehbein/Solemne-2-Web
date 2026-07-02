@@ -136,6 +136,136 @@
 }
 
 /* ==========================================================================
+   PANEL DE CONTROLES (esquina superior izquierda, espejo del auth-sidebar)
+   ========================================================================== */
+.controls-sidebar {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1000;
+  background-color: rgba(0, 0, 0, 0.75);
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 2px solid #444;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+  color: #fff;
+  max-width: 190px;
+}
+
+.controls-title {
+  margin: 0 0 6px 0;
+  font-size: 0.8rem;
+  color: #ffcc00;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.controls-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.controls-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.controls-list .key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 2px 6px;
+  background-color: #333;
+  border: 1px solid #666;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.7rem;
+}
+
+/* ==========================================================================
+   PANTALLA COMPLETA DEL JUEGO
+   ========================================================================== */
+.game-screen-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.fullscreen-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 50;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: 1px solid #666;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.fullscreen-btn:hover {
+  background-color: rgba(0, 0, 0, 0.85);
+  transform: scale(1.08);
+}
+
+.game-screen-wrapper:fullscreen,
+.game-screen-wrapper:-webkit-full-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+}
+
+/* El canvas de Phaser no es hijo directo de .game-screen-wrapper: vive
+   dentro de .game-canvas-container (el div con el borde). Ese contenedor
+   es un ítem flex sin ancho propio, así que normalmente se encoge al
+   tamaño de su contenido (el canvas) — si solo agrandáramos el canvas,
+   quedaría una dependencia circular y el navegador lo resuelve usando el
+   tamaño original como referencia. Por eso hay que estirar también el
+   contenedor a pantalla completa, no solo el canvas. */
+.game-screen-wrapper:fullscreen .game-canvas-container,
+.game-screen-wrapper:-webkit-full-screen .game-canvas-container {
+  width: 100vw !important;
+  height: 100vh !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+/* Phaser fija width/height del canvas como estilo inline (px fijos), que
+   siempre gana por sobre una regla de clase normal. Hace falta !important
+   para poder pisarlo y que el canvas realmente ocupe la pantalla completa
+   en vez de quedar centrado a su tamaño original con barras negras.
+   object-fit: contain escala manteniendo la proporción 480x320 del juego
+   (sin estirarlo) y image-rendering: pixelated evita que se vea borroso
+   al agrandarlo, ya que es un juego pixel art. */
+.game-screen-wrapper:fullscreen canvas,
+.game-screen-wrapper:-webkit-full-screen canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  image-rendering: pixelated !important;
+}
+
+/* ==========================================================================
    ESTILOS DE LOS MODALES FLOTANTES (VENTANAS)
    ========================================================================== */
 .modal-overlay {
