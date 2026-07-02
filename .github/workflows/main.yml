@@ -1,40 +1,141 @@
+# ============================================================
+# CI/CD Pipeline — BerryBadLuck
+#
+# Trigger: cualquier push a cualquier rama.
+# Los 4 jobs corren en este orden:
+#
+#   1. lint       → ESLint en frontend y backend (en paralelo)
+#   2. test-front → Vitest del frontend
+#   3. test-back  → Vitest del backend
+#   4. docker     → Build y push a DockerHub (solo si los 3 anteriores pasan)
+#
+# Secrets requeridos en el repositorio de GitHub:
+#   DOCKERHUB_USERNAME → tu usuario de DockerHub
+#   DOCKERHUB_TOKEN    → Access Token de DockerHub (Settings → Security)
+# ============================================================
+
 name: CI/CD Pipeline
 
 on:
   push:
     branches:
-      - main # Cambia esto a 'master' si tu rama principal se llama así
+      - '**'   # cualquier rama, no solo main
 
 jobs:
-  test-and-lint:
+
+  # -----------------------------------------------------------
+  # JOB 1: Linter (ESLint)
+  # Corre en paralelo para frontend y backend usando una matrix.
+  # Falla si cualquiera de los dos tiene errores de lint.
+  # -----------------------------------------------------------
+  lint:
+    name: Lint (${{ matrix.workspace }})
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        workspace: [frontend, backend]
+      fail-fast: true   # si uno falla, cancela el otro inmediatamente
+
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
 
       - name: Instalar pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '26'
+          node-version: '20'
           cache: 'pnpm'
 
       - name: Instalar dependencias
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Ejecutar Linter
-        run: pnpm run lint
+      - name: Ejecutar linter (${{ matrix.workspace }})
+        run: pnpm --filter ./${{ matrix.workspace }} run lint
 
-      - name: Ejecutar Pruebas Unitarias
-        run: pnpm test
-
-  docker-build-push:
-    needs: test-and-lint # Solo se ejecuta si el linter y los tests pasan exitosamente
+  # -----------------------------------------------------------
+  # JOB 2: Pruebas unitarias — Frontend (Vitest)
+  # -----------------------------------------------------------
+  test-frontend:
+    name: Tests Frontend
     runs-on: ubuntu-latest
+    needs: lint   # espera a que lint pase antes de correr
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Ejecutar tests del frontend
+        run: pnpm --filter ./frontend run test
+
+  # -----------------------------------------------------------
+  # JOB 3: Pruebas unitarias — Backend (Vitest)
+  # Las variables de entorno de test se definen aquí directamente:
+  # son secretos de prueba, distintos a los de producción, y no
+  # tienen que coincidir con ningún valor real — solo sirven para
+  # que config/jwt.js no lance un error al arrancar los tests.
+  # -----------------------------------------------------------
+  test-backend:
+    name: Tests Backend
+    runs-on: ubuntu-latest
+    needs: lint
+
+    env:
+      JWT_SECRET: test_jwt_secret_jugador_ci
+      ADMIN_JWT_SECRET: test_jwt_secret_admin_ci
+      COOKIE_SECRET: test_cookie_secret_ci
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Ejecutar tests del backend
+        run: pnpm --filter ./backend run test
+
+  # -----------------------------------------------------------
+  # JOB 4: Build y push de imágenes a DockerHub
+  # Solo corre si los 3 jobs anteriores (lint + 2 tests) pasan.
+  # Construye y sube dos imágenes separadas: frontend y backend.
+  # -----------------------------------------------------------
+  docker:
+    name: Build & Push DockerHub
+    runs-on: ubuntu-latest
+    needs: [lint, test-frontend, test-backend]
+
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -45,9 +146,28 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Construir y subir imagen a DockerHub
-        uses: docker/build-push-action@v5
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Imagen del FRONTEND: build estático + Nginx
+      - name: Build y push imagen Frontend
+        uses: docker/build-push-action@v6
         with:
           context: .
+          file: frontend/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/solemne-2-web:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/berrybadluck-frontend:latest
+          # Cache entre runs para que los builds sean más rápidos
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Imagen del BACKEND: Node/Express
+      - name: Build y push imagen Backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/berrybadluck-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
