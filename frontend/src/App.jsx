@@ -158,7 +158,7 @@ class Tyson extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y
 class Frog extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y, 'Frog_idle'); } }
 
 // ==============================================================================
-// ESCENA 1: MENÚ PRINCIPAL
+// ESCENA 1: NIVEL INICIAL (mapa_1.tmj) — VERSIÓN CORREGIDA v4
 // ==============================================================================
 class NivelUnoScene extends Phaser.Scene {
   constructor() {
@@ -170,18 +170,258 @@ class NivelUnoScene extends Phaser.Scene {
   }
 
   preload() {
-    // Vacío por ahora
+    const char = this.personajeSeleccionado;
+
+    this.load.tilemapTiledJSON('mapa_nivel1', 'assets/mapa_inicial/mapa_1.tmj');
+    this.load.image('tiles_terreno', 'assets/Terrain (16x16).png');
+    this.load.image('tiles_magma', 'assets/MAGAMA.png');
+    this.load.image('tiles_pinchoAr', 'assets/pinchoAr.png');
+    this.load.image('tiles_pinchoAb', 'assets/pinchoAb.png');
+
+    this.load.spritesheet(`${char}_idle`, `assets/animaciones/Main_Characters/${char}/Idle (32x32).png`, { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_walk`, `assets/animaciones/Main_Characters/${char}/Run (32x32).png`, { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_jump`, `assets/animaciones/Main_Characters/${char}/Jump (32x32).png`, { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_fall`, `assets/animaciones/Main_Characters/${char}/Fall (32x32).png`, { frameWidth: 32, frameHeight: 32 });
   }
 
   create() {
-    console.log("¡Llegamos con éxito al Nivel 1! Personaje:", this.personajeSeleccionado);
+    try {
+      this._crearEscena();
+    } catch (error) {
+      // Si algo falla aquí, Phaser normalmente solo lo deja en consola y la
+      // escena queda "viva" pero sin update() funcionando bien. Lo mostramos
+      // también en pantalla para no depender de que abras la consola.
+      console.error('[NivelUno] ERROR EN create():', error);
+      this.add.text(240, 160, `ERROR:\n${error.message}`, {
+        fontSize: '14px', fill: '#ff0000', backgroundColor: '#000000', align: 'center'
+      }).setOrigin(0.5).setDepth(999);
+    }
+  }
+
+  _crearEscena() {
+    const map = this.make.tilemap({ key: 'mapa_nivel1' });
+
+    // ---- TRANSPARENCIA BLANCA DE LOS PINCHOS ----
+    // El .tmj declara "transparentcolor":"#ffffff" para pinchoAr/pinchoAb,
+    // pero Phaser NO lee esa propiedad automáticamente al cargar imágenes
+    // sueltas con this.load.image(). Hay que aplicar el color-key a mano
+    // sobre la textura ya cargada, antes de usarla en el tilemap.
+    this.textures.get('tiles_pinchoAr').setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.textures.get('tiles_pinchoAb').setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this._aplicarColorKeyBlanco('tiles_pinchoAr');
+    this._aplicarColorKeyBlanco('tiles_pinchoAb');
+
+    const tsTerreno = map.addTilesetImage('terreno', 'tiles_terreno');
+    const tsLava = map.addTilesetImage('lava', 'tiles_magma');
+    const tsPinchoAr = map.addTilesetImage('pincho arriba', 'tiles_pinchoAr');
+    const tsPinchoAb = map.addTilesetImage('pincho abajo', 'tiles_pinchoAb');
+    const todosLosTilesets = [tsTerreno, tsLava, tsPinchoAr, tsPinchoAb].filter(t => t);
+
+    const capaTerreno = map.createLayer('terreno', todosLosTilesets, 0, 0);
+    capaTerreno.setCollisionByExclusion([-1]);
+
+    const capaTrampas = map.createLayer('trampas', todosLosTilesets, 0, 0);
+    capaTrampas.setCollisionByExclusion([-1]);
+
+    this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+    this.cameras.main.setBackgroundColor('#87CEEB');
+
+    // ---- SPAWN ----
+    const capaEntidades = map.getObjectLayer('entidades');
+    const puntoSpawn = capaEntidades?.objects.find(obj => obj.name === 'spawn_jugador');
+    const spawnX = puntoSpawn ? puntoSpawn.x : 50;
+    const spawnY = puntoSpawn ? puntoSpawn.y : 50;
+    console.log('[NivelUno] spawn calculado en', spawnX, spawnY);
+
+    const char = this.personajeSeleccionado;
+    if (!this.anims.exists(`${char}_idle`)) {
+      this.anims.create({ key: `${char}_idle`, frames: this.anims.generateFrameNumbers(`${char}_idle`), frameRate: 10, repeat: -1 });
+      this.anims.create({ key: `${char}_walk`, frames: this.anims.generateFrameNumbers(`${char}_walk`), frameRate: 15, repeat: -1 });
+      this.anims.create({ key: `${char}_jump`, frames: this.anims.generateFrameNumbers(`${char}_jump`), frameRate: 10, repeat: 0 });
+      this.anims.create({ key: `${char}_fall`, frames: this.anims.generateFrameNumbers(`${char}_fall`), frameRate: 10, repeat: -1 });
+    }
+
+    if (char === 'Shuri') this.player = new Shuri(this, spawnX, spawnY);
+    else if (char === 'Tyson') this.player = new Tyson(this, spawnX, spawnY);
+    else this.player = new Frog(this, spawnX, spawnY);
+
+    this.player.anims.play(`${char}_idle`);
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+
+    this.physics.add.collider(this.player, capaTerreno);
+
+    // ---- DEBUG VISUAL: dibuja los hitboxes para diagnosticar a simple vista ----
+    this.physics.world.createDebugGraphic();
+    this.physics.world.debugGraphic.setDepth(999);
+
+    // ---- DAÑO CON PINCHOS ----
+    // DIAGNOSTICADO: this.physics.add.overlap() contra la capa completa de
+    // tiles estaba devolviendo tiles "fantasma" con gid=-1 (es decir, celdas
+    // VACÍAS) en cada frame, sin que el jugador tocara ningún pincho real.
+    // Por eso moría constantemente sin moverse. Abandonamos el overlap
+    // automático de Phaser contra la capa y en su lugar consultamos
+    // manualmente, en cada frame, qué tile real hay bajo el jugador con
+    // getTileAtWorldXY — así controlamos el gid exacto (244 = pincho arriba,
+    // 245 = pincho abajo) y descartamos cualquier falso positivo.
+    this.tiempoUltimoDano = -99999;
+    const DURACION_INVULNERABILIDAD = 600;
+    const GIDS_PINCHO = [244, 245];
+
+    this.capaTrampasRef = capaTrampas;
+    this.spawnX = spawnX;
+    this.spawnY = spawnY;
+    this.GIDS_PINCHO = GIDS_PINCHO;
+    this.DURACION_INVULNERABILIDAD = DURACION_INVULNERABILIDAD;
+
+    // ---- ZONA DE SALIDA ----
+    const zonaSalida = capaEntidades?.objects.find(obj => obj.name === 'zona_salida');
+    if (zonaSalida) {
+      const rectSalida = this.add.zone(
+        zonaSalida.x + zonaSalida.width / 2,
+        zonaSalida.y + zonaSalida.height / 2,
+        zonaSalida.width,
+        zonaSalida.height
+      );
+      this.physics.add.existing(rectSalida, true);
+      this.physics.add.overlap(this.player, rectSalida, () => {
+        this.scene.start('GameScene', { personaje: char });
+      });
+    }
+
+    // ---- CONTROLES ----
+    // Verificamos explícitamente que los códigos de tecla sean válidos.
+    // Si configControles trae un valor que no existe en Phaser.Input.Keyboard.KeyCodes
+    // (por ejemplo undefined, o una tecla mal guardada), addKeys puede fallar
+    // silenciosamente o crear una tecla "undefined" que nunca se activa.
+    const configControles = this.registry.get('controles') || { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
+    console.log('[NivelUno] controles cargados:', configControles);
+
+    const resolverCodigo = (nombreTecla, porDefecto) => {
+      const codigo = Phaser.Input.Keyboard.KeyCodes[nombreTecla];
+      if (codigo === undefined) {
+        console.warn(`[NivelUno] Tecla "${nombreTecla}" inválida, usando ${porDefecto} por defecto.`);
+        return Phaser.Input.Keyboard.KeyCodes[porDefecto];
+      }
+      return codigo;
+    };
+
+    this.teclas = this.input.keyboard.addKeys({
+      ARRIBA: resolverCodigo(configControles.ARRIBA, 'W'),
+      IZQUIERDA: resolverCodigo(configControles.IZQUIERDA, 'A'),
+      ABAJO: resolverCodigo(configControles.ABAJO, 'S'),
+      DERECHA: resolverCodigo(configControles.DERECHA, 'D')
+    });
+
+    // Flechas como respaldo siempre disponible, por si las teclas guardadas fallan
+    this.teclasFlechas = this.input.keyboard.createCursorKeys();
+
+    this.player.jumpCount = 0;
+  }
+
+  // Convierte el color blanco (#ffffff) en transparente para una textura ya cargada.
+  // Equivale al "transparentcolor" que Tiled guarda en el .tmj pero que Phaser
+  // ignora cuando cargas la imagen como this.load.image() normal.
+  _aplicarColorKeyBlanco(claveTextura) {
+    const textura = this.textures.get(claveTextura);
+    const fuente = textura.getSourceImage();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = fuente.width;
+    canvas.height = fuente.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(fuente, 0, 0);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const datos = imageData.data;
+    for (let i = 0; i < datos.length; i += 4) {
+      const r = datos[i], g = datos[i + 1], b = datos[i + 2];
+      if (r > 240 && g > 240 && b > 240) {
+        datos[i + 3] = 0; // alpha a 0: blanco puro vuelve transparente
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+
+    this.textures.remove(claveTextura);
+    this.textures.addCanvas(claveTextura, canvas);
   }
 
   update() {
-    // Vacío por ahora
+    const char = this.personajeSeleccionado;
+
+    if (this.player.tintTopLeft !== 0xffffff && this.time.now - this.tiempoUltimoDano > 200) {
+      this.player.clearTint();
+    }
+
+    // ---- CHEQUEO MANUAL DE PINCHO (reemplaza el overlap automático roto) ----
+    // Revisamos las 4 esquinas del body del jugador contra el tilemap real.
+    // Solo cuenta como pincho si el gid del tile encontrado es 244 o 245.
+    {
+      const cuerpo = this.player.body;
+      const ahora = this.time.now;
+      if (ahora - this.tiempoUltimoDano >= this.DURACION_INVULNERABILIDAD) {
+        const puntos = [
+          [cuerpo.left + 2, cuerpo.top + 2],
+          [cuerpo.right - 2, cuerpo.top + 2],
+          [cuerpo.left + 2, cuerpo.bottom - 2],
+          [cuerpo.right - 2, cuerpo.bottom - 2],
+          [cuerpo.center.x, cuerpo.center.y]
+        ];
+        for (const [px, py] of puntos) {
+          const tile = this.capaTrampasRef.getTileAtWorldXY(px, py, true);
+          if (tile && this.GIDS_PINCHO.includes(tile.index)) {
+            console.log('[NivelUno] *** DAÑO REAL *** gid=' + tile.index, 'en jugador', Math.round(this.player.x), Math.round(this.player.y));
+            this.tiempoUltimoDano = ahora;
+            this.player.setPosition(this.spawnX, this.spawnY);
+            this.player.setVelocity(0, 0);
+            this.player.setTint(0xff0000);
+            break;
+          }
+        }
+      }
+    }
+
+    const moverIzquierda = this.teclas.IZQUIERDA.isDown || this.teclasFlechas.left.isDown;
+    const moverDerecha = this.teclas.DERECHA.isDown || this.teclasFlechas.right.isDown;
+    const botonSalto = Phaser.Input.Keyboard.JustDown(this.teclas.ARRIBA) || Phaser.Input.Keyboard.JustDown(this.teclasFlechas.up);
+
+    if (moverIzquierda) {
+      this.player.setVelocityX(-200);
+      this.player.flipX = true;
+    } else if (moverDerecha) {
+      this.player.setVelocityX(200);
+      this.player.flipX = false;
+    } else {
+      this.player.setVelocityX(0);
+    }
+
+    // Log de diagnóstico: solo cuando se presiona alguna tecla de movimiento,
+    // para confirmar si el jugador realmente cambia de posición frame a frame.
+    if (moverIzquierda || moverDerecha) {
+      console.log('[NivelUno] moviendo, posición actual:', Math.round(this.player.x), Math.round(this.player.y), 'velocidadX:', this.player.body.velocity.x);
+    }
+
+    const isGrounded = this.player.body.onFloor() || this.player.body.touching.down;
+    if (isGrounded) this.player.jumpCount = 0;
+
+    if (botonSalto && this.player.jumpCount < 2) {
+      this.player.setVelocityY(this.player.jumpCount === 0 ? this.player.fuerzaSalto : this.player.fuerzaDobleSalto);
+      this.player.jumpCount++;
+    }
+
+    if (!isGrounded) {
+      this.player.anims.play(this.player.body.velocity.y < 0 ? `${char}_jump` : `${char}_fall`, true);
+    } else if (this.player.body.velocity.x !== 0) {
+      this.player.anims.play(`${char}_walk`, true);
+    } else {
+      this.player.anims.play(`${char}_idle`, true);
+    }
   }
 }
 
+// ==============================================================================
+// ESCENA 1: MENÚ PRINCIPAL
+// ==============================================================================
 class MenuScene extends Phaser.Scene {
   constructor() { super({ key: 'MenuScene' }); }
   preload() {
@@ -476,7 +716,7 @@ class MenuSeleccion extends Phaser.Scene {
         fontSize: '16px', fill: '#00ff00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 
       }).setOrigin(0.5).setPadding(5).setInteractive({ useHandCursor: true });
       
-      btnJugar.on('pointerdown', () => { this.scene.start('GameScene', { personaje: char.id }); });
+      btnJugar.on('pointerdown', () => { this.scene.start('NivelUnoScene', { personaje: char.id }); });
 
       const btnMejorar = this.add.text(char.x, 250, '⭐ MEJORAS', { 
         fontSize: '14px', fill: '#ffff00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 
@@ -1084,7 +1324,7 @@ export default function App() {
       parent: gameRef.current,
       physics: {
         default: 'arcade',
-        arcade: { gravity: { y: 800 }, debug: false }
+        arcade: { gravity: { y: 800 }, debug: true }
       },
       scene: [MenuScene, MenuSeleccion, MejorasScene, NivelUnoScene, GameScene, PauseScene] 
     };
