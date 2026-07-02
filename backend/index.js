@@ -14,9 +14,8 @@ import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose'; 
 import bcrypt from 'bcrypt';
 import User from './models/User.js'; 
-import authRoutes from './routes/auth.js'; 
-import adminAuthRoutes from './routes/adminAuth.js'; 
-import cookieRoutes from './routes/cookieRoutes.js'; 
+import authRoutes from './routes/auth.js';
+import adminAuthRoutes from './routes/adminAuth.js';
 import scoresRoutes from './routes/scores.js';
 import avatarRoutes from './routes/avatar.js';
 import { COOKIE_SECRET } from './config/jwt.js';
@@ -39,10 +38,9 @@ app.use(express.json());
 app.use(cookieParser(COOKIE_SECRET));
 
 // --- RUTAS DE LA API --- //
-app.use('/api/auth', authRoutes); 
+app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminAuthRoutes); // <-- Rutas de autenticación de administradores
-app.use('/api/cookies', cookieRoutes); // <-- 2. Definimos que las rutas usen el prefijo /api/cookies
-app.use('/api/scores', scoresRoutes); // <-- 3. Definimos que las rutas usen el prefijo /api/scores
+app.use('/api/scores', scoresRoutes); // <-- Puntajes, leaderboard y progreso del jugador
 app.use('/api/avatar', avatarRoutes); // <-- Avatares generados via DiceBear (API externa)
 
 // --- CONEXIÓN A MONGODB --- //

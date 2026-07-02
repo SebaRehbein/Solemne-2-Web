@@ -208,7 +208,7 @@ Frontend:
 - Instrucciones de ejecución local (frontend y backend por separado)
 - Instrucciones con Docker Compose (docker compose up)
 - Links a imágenes en DockerHub (frontend y backend)
-* [ ] Revisar que DESIGN.md documenta correctamente la estrategia de autenticación dual, la API externa y la arquitectura
+* [x] Revisar que DESIGN.md documenta correctamente la estrategia de autenticación dual, la API externa y la arquitectura
 * [ ] Revisar PLANNING.md: actualizar todos los campos de avance logrado
 
 **Lo que se logró:**

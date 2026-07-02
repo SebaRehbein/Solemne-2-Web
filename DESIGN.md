@@ -106,24 +106,28 @@ Es un juego de plataformas web en 2D que fusiona la dificultad extrema y trampas
 │                          BACKEND                            │
 │                                                             │
 │   Node.js + Express                                         │
-│   ├── /api/auth  → verifyPlayer (Valida Cookie httpOnly)    │
-│   └── /api/admin → verifyAdmin  (Valida Header Auth Bearer) │
+│   ├── /api/auth   → verifyPlayer (cookie httpOnly firmada)  │
+│   ├── /api/admin  → verifyAdmin  (header Authorization)     │
+│   ├── /api/scores → verifyPlayer (puntaje, leaderboard)     │
+│   └── /api/avatar → público + verifyPlayer (proxy DiceBear) │
 │                                                             │
-│   JWT (autenticación)  ·  bcrypt (hash de contraseñas)      │
+│   JWT (autenticación) · bcrypt (hash) · cookie-parser (firma)│
 └──────────────────────────┬──────────────────────────────────┘
                            │ Mongoose ODM
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                          MONGODB                            │
-│   Colecciones: users (incluye progress, scores y rol)       │
+│   Colecciones: users (progress, avatarConfig y rol)         │
 └─────────────────────────────────────────────────────────────┘
                            │
-                           ▼ HTTP (En desarrollo)
+                           ▼ HTTP (proxy: /api/avatar/image/:username)
 ┌─────────────────────────────────────────────────────────────┐
 │                   SERVICIO REST EXTERNO                     │
-│                         (DiceBear)                          │
+│               (DiceBear — avatares pixel-art)                │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+El backend nunca expone la URL de DiceBear al navegador: el frontend siempre pide la imagen a su propio backend (`GET /api/avatar/image/:username`), que a su vez la descarga de DiceBear y la reenvía. Esto evita CORS y permite que el backend decida qué configuración de personalización (`avatarConfig`) aplicarle a cada usuario.
 
 ---
 
@@ -135,14 +139,24 @@ solemne-2-web/
 │   └── workflows/
 │       └── main.yml                  # Flujos de trabajo de GitHub Actions (CI/CD)
 ├── backend/                          # Capa de Negocio y Datos (Node.js + Express)
+│   ├── config/
+│   │   └── jwt.js                    # Lectura centralizada de JWT_SECRET, ADMIN_JWT_SECRET, COOKIE_SECRET
+│   ├── data/
+│   │   └── avatarOptions.js          # Catálogo de variantes/colores de DiceBear (para el editor de avatar)
 │   ├── middlewares/
 │   │   └── authMiddleware.js         # Validaciones de JWT (verifyPlayer, verifyAdmin)
 │   ├── models/
 │   │   └── User.js                   # Esquema de base de datos (Mongoose)
 │   ├── routes/
 │   │   ├── adminAuth.js              # Endpoints exclusivos para administradores
-│   │   └── auth.js                   # Endpoints de autenticación de jugadores
-│   ├── index.js                      # Punto de entrada del servidor API REST
+│   │   ├── auth.js                   # Endpoints de autenticación de jugadores
+│   │   ├── avatar.js                 # Proxy a DiceBear + editor de personalización
+│   │   └── scores.js                 # Cálculo de puntaje, leaderboard y progreso personal
+│   ├── tests/                        # Pruebas unitarias e integración (Vitest + Supertest)
+│   ├── utils/
+│   │   └── calcularPuntaje.js        # Fórmula centralizada de puntaje (el frontend nunca la decide)
+│   ├── app.js                        # App de Express (middlewares + rutas, sin conexión a Mongo)
+│   ├── index.js                      # Punto de entrada: conecta Mongo y levanta el servidor
 │   ├── package-lock.json
 │   └── package.json                  # Dependencias del backend
 ├── frontend/                         # Capa de Presentación (React + Phaser + Vite)
@@ -155,10 +169,15 @@ solemne-2-web/
 │   │   ├── favicon.svg
 │   │   └── icons.svg
 │   ├── src/                          # Código fuente de la interfaz web
+│   │   ├── admin/                    # Panel de administración (login, dashboard, contexto de auth)
+│   │   ├── api/
+│   │   │   ├── axios.js              # Cliente HTTP de jugador (envía cookies automáticamente)
+│   │   │   └── adminAxios.js         # Cliente HTTP de admin (adjunta el JWT como header Bearer)
 │   │   ├── assets/                   # Imágenes de menús y UI
 │   │   ├── App.css                   # Estilos principales
 │   │   ├── App.jsx                   # Componente raíz (Lógica de Phaser y Menús)
 │   │   ├── App.test.jsx              # Pruebas automatizadas (Frontend)
+│   │   ├── AvatarEditor.jsx          # Editor de personalización del avatar (DiceBear)
 │   │   ├── index.css                 # Estilos globales
 │   │   ├── localStorage.test.jsx     # Pruebas de persistencia
 │   │   └── main.jsx                  # Punto de montaje de React
@@ -166,11 +185,12 @@ solemne-2-web/
 │   ├── index.html                    # Plantilla principal del frontend
 │   ├── package.json                  # Dependencias del frontend
 │   └── vite.config.js                # Configuración del empaquetador Vite
+├── .github/workflows/main.yml        # Pipeline de CI/CD (lint + tests + build/push DockerHub)
 ├── .gitignore                        # Archivos excluidos del control de versiones
 ├── DESIGN.md                         # Documentación de arquitectura fullstack
-├── Dockerfile                        # Configuración de contenedorización
 ├── PLANING.md                        # Registro de planificación y tareas
 ├── README.md                         # Documentación principal del proyecto
+├── compose.yml                       # Orquestación de los 3 servicios (mongo/backend/frontend)
 ├── package.json                      # Configuración del monorepositorio
 ├── pnpm-lock.yaml                    # Bloqueo de versiones de dependencias
 └── pnpm-workspace.yaml               # Configuración del espacio de trabajo pnpm
@@ -183,18 +203,26 @@ El proyecto utiliza **MongoDB** como base de datos NoSQL, estructurando y valida
 
 ### Esquema: `User` (`backend/models/User.js`)
 
-Este modelo actúa como el núcleo de persistencia. Unifica de forma segura las credenciales de acceso, los roles de autorización para el backend y las estadísticas de progreso para el motor del juego.
+Este modelo actúa como el núcleo de persistencia. Unifica de forma segura las credenciales de acceso, los roles de autorización para el backend, el progreso del jugador y su personalización de avatar.
 
 | Campo | Tipo de Dato | Propiedades / Restricciones | Descripción de la Lógica de Negocio |
 | :--- | :--- | :--- | :--- |
-| `username` | `String` | `required`, `unique`, `trim` | Identificador público del jugador. Se utiliza en el juego y como semilla (seed) para generar el avatar dinámico en la API externa. |
+| `username` | `String` | `required`, `unique`, `trim` | Identificador público del jugador. Se utiliza en el juego y como semilla (seed) por defecto para el avatar en la API externa. |
 | `email` | `String` | `required`, `unique`, `lowercase` | Correo electrónico de contacto. El sistema fuerza el formato en minúsculas para evitar cuentas duplicadas por errores de tipeo. |
 | `passwordHash` | `String` | `required` | Hash de seguridad de la contraseña. Nunca se almacena en texto plano; es procesado por `bcrypt` antes de la inserción. |
 | `role` | `String` | `enum: ['player', 'admin']` | Define el nivel de privilegios del usuario para consumir la API. El valor por defecto al registrarse es `player`. |
-| `progress` | `Object` | Embebido | Sub-documento que agrupa el estado de la progresión activa del personaje en el frontend. |
-| ↳ `nivel` | `Number` | `default: 1` | Nivel actual de progresión dentro del sistema del juego. |
-| ↳ `puntaje`| `Number` | `default: 0` | Cantidad de puntos acumulados en la sesión o progreso actual. |
-| `scores` | `Array[Number]` | - | Historial en formato de lista (arreglo) que almacena todas las puntuaciones obtenidas por el jugador en partidas pasadas (ej. tras vencer al jefe). |
+| `progress` | `Object` | Embebido | Sub-documento que agrupa el nivel actual y el mejor resultado histórico del jugador. |
+| ↳ `nivel` | `Number` | `default: 1` | Nivel alcanzado en la partida más reciente (se actualiza en cada `POST /api/scores`, gane o pierda su récord). |
+| ↳ `mejorPuntaje` | `Object` | Embebido | Solo guarda la **mejor** partida histórica, no un historial completo. Se sobrescribe únicamente si el nuevo puntaje la supera. |
+| &nbsp;&nbsp;↳ `puntos` | `Number` | `default: 0` | Puntaje calculado por `calcularPuntaje()` (backend/utils/calcularPuntaje.js), a partir de nivel, tiempo y daño recibido. El frontend nunca envía el puntaje directamente. |
+| &nbsp;&nbsp;↳ `nivelAlcanzado` | `Number` | `default: 0` | Nivel que alcanzó en esa mejor partida. |
+| &nbsp;&nbsp;↳ `tiempoSegundos` | `Number` | `default: null` | Tiempo que tardó en esa mejor partida. |
+| &nbsp;&nbsp;↳ `danoRecibido` | `Number` | `default: null` | Daño acumulado en esa mejor partida. |
+| &nbsp;&nbsp;↳ `fecha` | `Date` | `default: null` | Cuándo logró ese mejor puntaje. |
+| `avatarConfig` | `Object` | Embebido | Personalización del avatar generado vía DiceBear (estilo pixel-art). Si queda vacío, el avatar se genera solo a partir del `username` (comportamiento por defecto). |
+| ↳ `seed` | `String` | `default: null` | Semilla alternativa al username (botón "aleatorio" del editor). |
+| ↳ `hair`, `clothes`, `eyes`, `mouth`, `glasses`, `hat`, `beard`, `accessories`, `skin` | `Mixed` | `{ variant, color }` c/u | Una entrada por categoría personalizable de DiceBear. El shape se valida y normaliza en `PUT /api/avatar/config` (backend/routes/avatar.js), no a nivel de esquema. |
+| ↳ `actualizadoEn` | `Date` | `default: null` | Fecha de la última personalización guardada; se usa para invalidar el cache de la imagen del avatar en el navegador. |
 | `createdAt` | `Date` | `default: Date.now` | Sello de tiempo (timestamp) generado automáticamente por el servidor al crear el documento en la base de datos. |
 
 ---
@@ -303,14 +331,50 @@ Provee las herramientas operativas para cuentas con privilegios administrativos.
               "role": "player",
               "progress": {
                 "nivel": 3,
-                "puntaje": 1500
+                "mejorPuntaje": {
+                  "puntos": 1500,
+                  "nivelAlcanzado": 3,
+                  "tiempoSegundos": 180,
+                  "danoRecibido": 40,
+                  "fecha": "2026-06-25T18:00:00.000Z"
+                }
               },
-              "scores": [500, 1000, 1500],
+              "avatarConfig": { "seed": null, "hair": { "variant": null, "color": null } },
               "createdAt": "2026-06-22T06:00:00.000Z"
             }
           ]
         }
         ```
+---
+
+## Módulo de Puntajes (`/api/scores`)
+
+Calcula y persiste el resultado de cada partida. El puntaje **nunca** lo decide el frontend: el cliente solo envía los datos crudos de la partida (`nivelAlcanzado`, `tiempoSegundos`, `danoRecibido`) y el backend aplica la fórmula centralizada en `calcularPuntaje()`.
+
+**Fórmula:** `puntos = nivelAlcanzado * 1000 - tiempoSegundos * 2 - danoRecibido * 5` (nunca negativo). Llegar más lejos siempre pesa más que ser rápido o no recibir daño; entre jugadores que llegan al mismo nivel, gana quien fue más rápido y recibió menos daño.
+
+| Método | Ruta | Protección / Middleware | Descripción |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/scores` | `verifyPlayer` | Calcula el puntaje de la partida recién terminada. Actualiza `progress.nivel` siempre; solo sobrescribe `progress.mejorPuntaje` si el nuevo puntaje supera al anterior. Responde `esNuevoRecord: true/false`. |
+| `GET` | `/api/scores/leaderboard` | Ninguna | Top 10 jugadores con `progress.mejorPuntaje.puntos` más alto. Ruta pública. |
+| `GET` | `/api/scores/me` | `verifyPlayer` | Progreso del jugador autenticado: nivel actual, mejor puntaje y su posición en el ranking global (cuenta cuántos jugadores tienen más puntos + 1). |
+
+---
+
+## Módulo de Avatares y API Externa (`/api/avatar`)
+
+Este módulo consume la API externa REST elegida para el proyecto: **[DiceBear](https://www.dicebear.com/)** (estilo `pixel-art`), usada para generar avatares de los jugadores a partir de su `username`, con un editor de personalización opcional (cabello, ropa, ojos, boca, gafas, sombrero, barba, accesorios y color de piel).
+
+El backend actúa siempre como **proxy**: el navegador (y Phaser) nunca llaman directo a `api.dicebear.com`, sino a estos endpoints propios. Esto evita problemas de CORS, permite aplicar la personalización guardada en MongoDB y oculta los detalles de la API externa al cliente.
+
+| Método | Ruta | Protección / Middleware | Descripción |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/avatar/options` | Ninguna | Catálogo de categorías, variantes y colores disponibles para el editor (`backend/data/avatarOptions.js`, extraído de la definición oficial de DiceBear). |
+| `GET` | `/api/avatar/config` | `verifyPlayer` | Devuelve la personalización (`avatarConfig`) guardada del jugador autenticado, para precargar el editor. |
+| `PUT` | `/api/avatar/config` | `verifyPlayer` | Guarda la personalización elegida. Cualquier campo omitido queda en `null` (DiceBear decide esa parte al azar según la seed). |
+| `GET` | `/api/avatar/image/:username` | Ninguna | Descarga el PNG desde DiceBear aplicando `avatarConfig` (o solo el username si no hay personalización) y lo reenvía como propio. Soporta `?preview=<json>` para previsualizar cambios sin guardarlos. Cachea 5 min (no cachea previews). |
+| `GET` | `/api/avatar/urls?usernames=a,b,c` | Ninguna | Devuelve, para una lista de usernames, la URL absoluta de `/api/avatar/image/:username` que debe usar el frontend/Phaser como `src`/textura. |
+
 ---
 
 ## Stack Tecnológico Completo
@@ -329,7 +393,7 @@ A continuación se detalla el conjunto de herramientas, librerías y servicios u
 | **jsonwebtoken (JWT)** | Estándar para la emisión y verificación de credenciales de sesión y roles. |
 | **cookie-parser** | Middleware de Express para la lectura y gestión de cookies de sesión `httpOnly`. |
 | **MongoDB** | Base de datos NoSQL — Almacenamiento persistente de usuarios, puntajes y progreso. |
-| **DiceBear API** | Servicio REST externo — Generación automatizada de avatares pixel art (En proceso). |
+| **DiceBear API** | Servicio REST externo — Generación de avatares pixel art, consumida vía proxy en `/api/avatar` para evitar CORS y aplicar personalización. |
 | **Vite** | Bundler del frontend — Herramienta de construcción y empaquetado ultra rápido. |
 | **pnpm** | Gestor de paquetes centralizado y orquestador del monorepositorio (Workspaces). |
 | **Vitest + Testing Library** | Entorno de ejecución de pruebas unitarias y de integración para el frontend. |

@@ -15,7 +15,6 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
 import adminAuthRoutes from './routes/adminAuth.js';
-import cookieRoutes from './routes/cookieRoutes.js';
 import scoresRoutes from './routes/scores.js';
 import avatarRoutes from './routes/avatar.js';
 import { COOKIE_SECRET } from './config/jwt.js';
@@ -32,7 +31,6 @@ app.use(cookieParser(COOKIE_SECRET));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminAuthRoutes);
-app.use('/api/cookies', cookieRoutes);
 app.use('/api/scores', scoresRoutes);
 app.use('/api/avatar', avatarRoutes);
 
