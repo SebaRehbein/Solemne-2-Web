@@ -201,7 +201,7 @@ Frontend:
 
 **Tareas planificadas:**
 
-* [ ] Pruebas de integración end-to-end: registro → login (cookie) → jugar → puntaje → ranking
+* [x] Pruebas de integración end-to-end: registro → login (cookie) → puntaje → ranking
 * [ ] Verificar que el CI/CD de GitHub Actions pasa correctamente (linter + tests + build)
 * [ ] Completar README.md:
 - Título y descripción del proyecto
