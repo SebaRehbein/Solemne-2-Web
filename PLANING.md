@@ -62,6 +62,8 @@ se le dio prioridad a completar la funcionalidad en su navegador base (chrome) p
 
 **Lo que se logró:**
 
+- Todo fue logrado en el plazo esperado durante la semana
+
 **Lo que no se logró y motivo:**
 
 # FASE 2
@@ -73,7 +75,7 @@ se le dio prioridad a completar la funcionalidad en su navegador base (chrome) p
 **Tareas Planificadas**
 
 * [x] Pruebas de compatibilidad cross-browser: ejecutar el juego en Firefox y Safari, registrar y corregir diferencias de comportamiento respecto a Chrome (eventos de teclado, canvas rendering, estilos CSS).
-* [ ] Sistema de puntaje: completar la lógica de puntaje que quedó aplazada por los mapas; asegurarse de que incrementa correctamente al recoger ítems o superar niveles y se muestra en pantalla.
+* [x] Sistema de puntaje: completar la lógica de puntaje que quedó aplazada por los mapas; asegurarse de que incrementa correctamente al recoger ítems o superar niveles y se muestra en pantalla.
 * [x] Pruebas unitarias del frontend (Solemne 2): implementar tests sobre el sistema de puntaje ya funcional y sobre el guardado en localStorage (guardar, recuperar y limpiar partida). Usar Jest o Vitest según el setup existente.
 * [x] README.md base: actualizar título y descripción del juego con la temática final; agregar instrucciones de ejecución local e instrucciones para levantar con Docker (ya existente en el proyecto).
 
@@ -90,6 +92,8 @@ se le dio prioridad a completar la funcionalidad en su navegador base (chrome) p
 * [x] Implementar endpoint POST /api/auth/register con hash de contraseña (bcrypt)
 
 **Lo que se logró:**
+
+- Todo fue logrado en el plazo esperado durante la semana
 
 **Lo que no se logró y motivo:**
 
@@ -120,6 +124,8 @@ Frontend:
 
 **Lo que se logró:**
 
+- Todo fue logrado en el plazo esperado durante la semana
+
 **Lo que no se logró y motivo:**
 
 ## Semana 2 (22 de junio - 26 de junio)
@@ -137,6 +143,9 @@ Frontend:
 
 **Lo que se logró:**
 
+- Todo fue logrado en el plazo esperado durante la semana
+
+
 **Lo que no se logró y motivo:**
 
 **Avance 4 - Martes 23 de junio: Integrar servicio REST externo y conectar con la lógica del juego.**
@@ -150,6 +159,9 @@ Frontend:
 * [x] Pruebas manuales del flujo completo: registro → login (cookie) → jugar → guardar puntaje → ranking
 
 **Lo que se logró:**
+
+- Todo fue logrado en el plazo esperado durante la semana
+
 
 **Lo que no se logró y motivo:**
 
@@ -169,6 +181,8 @@ Frontend:
 * [x] Probar docker compose up --build y verificar que el flujo completo funciona
 
 **Lo que se logró:**
+
+- Todo fue logrado en el plazo esperado durante la semana
 
 **Lo que no se logró y motivo:**
 
@@ -195,6 +209,8 @@ Frontend:
 
 **Lo que se logró:**
 
+- Todo fue logrado en el plazo esperado durante la semana
+
 **Lo que no se logró y motivo:**
 
 **Avance 7 — Martes 30 de junio: Pulir el juego, completar el README y hacer pruebas de integración.**
@@ -209,9 +225,11 @@ Frontend:
 - Instrucciones con Docker Compose (docker compose up)
 - Links a imágenes en DockerHub (frontend y backend)
 * [x] Revisar que DESIGN.md documenta correctamente la estrategia de autenticación dual, la API externa y la arquitectura
-* [ ] Revisar PLANNING.md: actualizar todos los campos de avance logrado
+* [x] Revisar PLANNING.md: actualizar todos los campos de avance logrado
 
 **Lo que se logró:**
+
+- Todo fue logrado en el plazo esperado durante la semana
 
 **Lo que no se logró y motivo:**
 
@@ -220,9 +238,9 @@ Frontend:
 **Tareas planificadas:**
 
 * [ ] Último git push antes del cierre (verificar que la última versión está en main)
-* [ ] Confirmar que docker compose up --build levanta los tres servicios sin errores
-* [ ] Confirmar que GitHub Actions pasa (verde) en el último commit
-* [ ] Revisar que los links de DockerHub en el README apuntan a las imágenes correctas
+* [x] Confirmar que docker compose up --build levanta los tres servicios sin errores
+* [x] Confirmar que GitHub Actions pasa (verde) en el último commit
+* [x] Revisar que los links de DockerHub en el README apuntan a las imágenes correctas
 * [ ] Control de avance individual (preparar explicación del código propio)
 
 **Lo que se logró:**
@@ -240,5 +258,5 @@ Frontend:
 * [ ] diseñar barra de vida para el jefe.
 * [ ] eliminar mensajes emergentes desde buscador e implementarlos dentro del juego.
 * [ ] crear assets para titulos y botones.
-* [ ] mejorar e implementar bien las mecanicas de movilidad.
+* [x] mejorar e implementar bien las mecanicas de movilidad.
 * [ ] implementar intruccion sobre el juego al pie de la pantalla.
