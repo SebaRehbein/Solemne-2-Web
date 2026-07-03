@@ -157,6 +157,18 @@ class Shuri extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y
 class Tyson extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y, 'Tyson_idle'); } }
 class Frog extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y, 'Frog_idle'); } }
 
+// Replica en el cliente la misma fórmula que backend/utils/calcularPuntaje.js,
+// para poder mostrar el puntaje en la pantalla de "Fin de la partida" al
+// instante, sin esperar la respuesta del servidor y también cuando se juega
+// sin sesión iniciada (caso en el que el puntaje nunca llega a enviarse).
+const PUNTOS_POR_NIVEL = 1000;
+const PENALIZACION_POR_SEGUNDO = 2;
+const PENALIZACION_POR_DANO = 5;
+function calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido }) {
+  const puntos = nivelAlcanzado * PUNTOS_POR_NIVEL - tiempoSegundos * PENALIZACION_POR_SEGUNDO - danoRecibido * PENALIZACION_POR_DANO;
+  return Math.max(Math.round(puntos), 0);
+}
+
 // ==============================================================================
 // ==============================================================================
 // ESCENA 1: NIVEL INICIAL (mapa_1.tmj)
@@ -354,12 +366,20 @@ class NivelUnoScene extends Phaser.Scene {
     this.textures.addCanvas(claveTextura, canvas);
   }
 
+  // Calcula el puntaje siempre (para poder mostrarlo en GameOverScene aunque
+  // no haya sesión iniciada) y solo lo envía al backend si hay un usuario
+  // logueado; si juega sin cuenta, el progreso simplemente no se guarda.
   enviarPuntaje(nivelAlcanzado) {
-    if (!this.registry.get('usuarioActual')) return;
     const tiempoSegundos = Math.round((this.time.now - this.tiempoInicio) / 1000);
-    api.post('/scores', {
-      nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal
-    }).catch(err => console.error('No se pudo guardar el puntaje:', err));
+    const puntos = calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal });
+
+    if (this.registry.get('usuarioActual')) {
+      api.post('/scores', {
+        nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal
+      }).catch(err => console.error('No se pudo guardar el puntaje:', err));
+    }
+
+    return puntos;
   }
 
   update() {
@@ -393,9 +413,7 @@ class NivelUnoScene extends Phaser.Scene {
             this.player.setPosition(this.spawnX, this.spawnY);
             this.player.setVelocity(0, 0);
             this.player.setTint(0xff6600);
-            this.enviarPuntaje(0);
-            setTimeout(() => alert('¡Te quemaste en la lava!'), 50);
-            this.scene.start('MenuSeleccion');
+            this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
             return;
           }
 
@@ -409,9 +427,7 @@ class NivelUnoScene extends Phaser.Scene {
             this.player.setVelocity(0, 0);
             this.player.setTint(0xff0000);
             if (this.playerHealth <= 0) {
-              this.enviarPuntaje(0);
-              setTimeout(() => alert('¡Perdiste toda la vida!'), 50);
-              this.scene.start('MenuSeleccion');
+              this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
               return;
             }
             break;
@@ -977,9 +993,8 @@ class GameScene extends Phaser.Scene {
             this.player.setTint(0xffa500);
             this.time.delayedCall(300, () => this.player.clearTint());
             if (this.playerHealth <= 0) {
-                this.enviarPuntaje(0); // murió: nivelAlcanzado simbólico = 0
-                setTimeout(() => alert("¡Te quemaste en la lava!"), 50);
-                this.scene.start('MenuSeleccion'); 
+                // murió: nivelAlcanzado simbólico = 0
+                this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
             }
         });
     }
@@ -1164,9 +1179,8 @@ class GameScene extends Phaser.Scene {
       player.setTint(0xff0000);
       this.time.delayedCall(200, () => player.clearTint());
       if (this.playerHealth <= 0) {
-        this.enviarPuntaje(0); // murió: nivelAlcanzado simbólico = 0
-        setTimeout(() => alert("¡Te mató el jefe!"), 50);
-        this.scene.start('MenuSeleccion'); 
+        // murió: nivelAlcanzado simbólico = 0
+        this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
       }
     });
 
@@ -1204,20 +1218,24 @@ class GameScene extends Phaser.Scene {
   // nivelAlcanzado es, por ahora, simbólico: 1 = venció al jefe, 0 = murió.
   // Cuando se implemente el nivel principal antes del jefe, este número
   // pasará a ser un contador real de pantallas superadas.
-  // Solo se envía si hay un usuario logueado (user !== null); si juega
-  // sin cuenta, el progreso simplemente no se guarda en el backend.
+  // El puntaje se calcula siempre (para poder mostrarlo en GameOverScene
+  // aunque no haya sesión iniciada); solo se envía al backend si hay un
+  // usuario logueado, si no, el progreso simplemente no se guarda.
   enviarPuntaje(nivelAlcanzado) {
-    if (!this.registry.get('usuarioActual')) return;
-
     const tiempoSegundos = Math.round((this.time.now - this.tiempoInicio) / 1000);
+    const puntos = calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal });
 
-    api.post('/scores', {
-      nivelAlcanzado,
-      tiempoSegundos,
-      danoRecibido: this.danoRecibidoTotal
-    }).catch((error) => {
-      console.error('No se pudo guardar el puntaje:', error);
-    });
+    if (this.registry.get('usuarioActual')) {
+      api.post('/scores', {
+        nivelAlcanzado,
+        tiempoSegundos,
+        danoRecibido: this.danoRecibidoTotal
+      }).catch((error) => {
+        console.error('No se pudo guardar el puntaje:', error);
+      });
+    }
+
+    return puntos;
   }
 
   // ==========================================================
@@ -1350,10 +1368,83 @@ class PauseScene extends Phaser.Scene {
       btn.on('pointerout', () => btn.setScale(1)); 
     });
     
-    this.input.keyboard.on('keydown-ESC', () => { 
-      this.scene.resume(this.escenaAnterior); 
-      this.scene.stop(); 
+    this.input.keyboard.on('keydown-ESC', () => {
+      this.scene.resume(this.escenaAnterior);
+      this.scene.stop();
     });
+  }
+}
+
+// ==============================================================================
+// ESCENA 6: FIN DE LA PARTIDA (se muestra al morir, reemplaza el alert())
+// ==============================================================================
+class GameOverScene extends Phaser.Scene {
+  constructor() { super({ key: 'GameOverScene' }); }
+
+  init(data) {
+    this.puntos = data.puntos ?? 0;
+  }
+
+  // Genera (una sola vez) una calavera pixel-art a partir de una matriz de
+  // celdas, con el mismo enfoque que ya usa el juego para la bala y el
+  // jefe (Graphics + generateTexture): no hace falta cargar un asset nuevo.
+  // Las celdas en 0 y 2 quedan sin dibujar, así que el fondo oscuro de la
+  // pantalla se ve "a través" de ellas, formando las cuencas de los ojos,
+  // la nariz y las separaciones entre los dientes.
+  crearTexturaCalavera() {
+    const clave = 'calaveraPixel';
+    if (this.textures.exists(clave)) return clave;
+
+    const patron = [
+      [0,0,0,0,1,1,1,1,1,0,0,0,0],
+      [0,0,1,1,1,1,1,1,1,1,1,0,0],
+      [0,1,1,1,1,1,1,1,1,1,1,1,0],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,2,2,1,1,1,1,1,2,2,1,1],
+      [1,1,2,2,1,1,1,1,1,2,2,1,1],
+      [1,1,1,1,1,2,1,2,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [0,1,1,1,1,1,1,1,1,1,1,1,0],
+      [0,1,2,1,2,1,2,1,2,1,2,1,0],
+      [0,0,1,1,1,1,1,1,1,1,1,0,0],
+      [0,0,0,1,1,1,1,1,1,1,0,0,0]
+    ];
+    const cell = 6;
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0xffffff, 1);
+    patron.forEach((fila, y) => {
+      fila.forEach((valor, x) => {
+        if (valor === 1) graphics.fillRect(x * cell, y * cell, cell, cell);
+      });
+    });
+    graphics.generateTexture(clave, patron[0].length * cell, patron.length * cell);
+    graphics.destroy();
+    return clave;
+  }
+
+  create() {
+    this.add.rectangle(240, 160, 480, 320, 0x000000, 0.9);
+
+    this.add.text(240, 50, 'FIN DE LA PARTIDA', {
+      fontSize: '30px', fill: '#ff2222', fontStyle: 'bold', stroke: '#000000', strokeThickness: 5
+    }).setOrigin(0.5);
+
+    const claveCalavera = this.crearTexturaCalavera();
+    this.add.image(240, 125, claveCalavera).setScale(1.2);
+
+    this.add.text(240, 195, 'Puntuación:', {
+      fontSize: '18px', fill: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.add.text(240, 222, `${this.puntos}`, {
+      fontSize: '26px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4
+    }).setOrigin(0.5);
+
+    const btnVolver = this.add.text(240, 270, 'Volver al menú', {
+      fontSize: '22px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    btnVolver.on('pointerover', () => btnVolver.setScale(1.1));
+    btnVolver.on('pointerout', () => btnVolver.setScale(1));
+    btnVolver.on('pointerdown', () => { this.scene.start('MenuSeleccion'); });
   }
 }
 
@@ -1363,7 +1454,7 @@ class PauseScene extends Phaser.Scene {
 const CONTROLES_POR_DEFECTO = { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
 
 // Escenas donde se muestra el botón de pantalla completa
-const ESCENAS_CON_BOTON_FULLSCREEN = ['MenuScene', 'MenuSeleccion', 'MejorasScene', 'PauseScene'];
+const ESCENAS_CON_BOTON_FULLSCREEN = ['MenuScene', 'MenuSeleccion', 'MejorasScene', 'PauseScene', 'GameOverScene'];
 
 export default function App() {
   const gameRef        = useRef(null);
@@ -1404,7 +1495,7 @@ export default function App() {
         default: 'arcade',
         arcade: { gravity: { y: 800 }, debug: false }
       },
-      scene: [MenuScene, MenuSeleccion, MejorasScene, NivelUnoScene, GameScene, PauseScene] 
+      scene: [MenuScene, MenuSeleccion, MejorasScene, NivelUnoScene, GameScene, PauseScene, GameOverScene]
     };
     const game = new Phaser.Game(config);
     gameInstanceRef.current = game;
