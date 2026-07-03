@@ -169,6 +169,40 @@ function calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido }
   return Math.max(Math.round(puntos), 0);
 }
 
+// Genera (una sola vez, la textura se cachea globalmente) una calavera
+// pixel-art a partir de una matriz de celdas, con el mismo enfoque que ya
+// usa el juego para la bala y el jefe (Graphics + generateTexture). La
+// comparten GameOverScene (ícono de "fin de la partida") y GameScene (ícono
+// de la barra de vida del jefe). Las celdas en 0 y 2 quedan sin dibujar, así
+// que el fondo oscuro de la escena se ve "a través" de ellas, formando las
+// cuencas de los ojos, la nariz y las separaciones entre los dientes.
+function crearTexturaCalavera(scene) {
+  const clave = 'calaveraPixel';
+  if (scene.textures.exists(clave)) return clave;
+
+  const patron = [
+    [0,0,0,0,1,1,1,1,1,0,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,1,0,0],
+    [0,1,1,1,1,1,1,1,1,1,1,1,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,2,2,1,1,1,1,1,2,2,1,1],
+    [1,1,2,2,1,1,1,1,1,2,2,1,1],
+    [1,1,1,1,1,2,1,2,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [0,1,1,1,1,1,1,1,1,1,1,1,0],
+    [0,1,2,1,2,1,2,1,2,1,2,1,0],
+    [0,0,1,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,1,1,1,1,1,1,1,0,0,0]
+  ];
+  const cell = 6;
+  const g = scene.add.graphics();
+  g.fillStyle(0xffffff, 1);
+  patron.forEach((fila, y) => fila.forEach((v, x) => { if (v === 1) g.fillRect(x * cell, y * cell, cell, cell); }));
+  g.generateTexture(clave, patron[0].length * cell, patron.length * cell);
+  g.destroy();
+  return clave;
+}
+
 
 // ==============================================================================
 // ==============================================================================
@@ -1209,11 +1243,13 @@ class GameScene extends Phaser.Scene {
     }
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
-    // JUGADOR Y BARRA DE VIDA
+    // JUGADOR Y BARRA DE VIDA — esquina superior IZQUIERDA (la derecha queda
+    // para la barra de vida del jefe, ver más abajo, junto a la creación de este)
     this.playerHealth = this.estadisticas.vidaMaxima;
     this.maxHealth = this.estadisticas.vidaMaxima;
 
-    const barX = 10, barY = 10, barWidth = 150, barHeight = 15;
+    const barWidth = 150, barHeight = 15;
+    const barX = 10, barY = 10;
     this.healthBg = this.add.graphics().setScrollFactor(0);
     this.healthBg.fillStyle(0x000000, 0.6).fillRect(barX, barY, barWidth, barHeight);
     this.healthBg.lineStyle(1, 0xffffff, 1).strokeRect(barX, barY, barWidth, barHeight);
@@ -1340,9 +1376,32 @@ class GameScene extends Phaser.Scene {
     this.boss.anims.play('boss_flying');
 
     this.bossHealth  = 4000;
+    this.bossHealthMax = this.bossHealth;
     this.bossPhase   = 1;
     this.bossIsDying = false;   // flag para bloquear más daño durante la animación de muerte
     if(capaTerreno) this.physics.add.collider(this.boss, capaTerreno);
+
+    // BARRA DE VIDA DEL JEFE — mismo tamaño y técnica que la del jugador,
+    // pero en la esquina superior DERECHA (la del jugador vive en la
+    // izquierda, ver más arriba) y en morado en vez de rojo, para que se
+    // distingan a simple vista. Usa una calavera pixel-art en vez del corazón.
+    const bossBarX = 480 - 10 - barWidth, bossBarY = 10;
+    this.bossHealthBg = this.add.graphics().setScrollFactor(0).setDepth(50);
+    this.bossHealthBg.fillStyle(0x000000, 0.6).fillRect(bossBarX, bossBarY, barWidth, barHeight);
+    this.bossHealthBg.lineStyle(1, 0xffffff, 1).strokeRect(bossBarX, bossBarY, barWidth, barHeight);
+    this.bossHealthBar = this.add.graphics().setScrollFactor(0).setDepth(50);
+    this.bossHealthIcon = this.add.image(bossBarX + 10, bossBarY + barHeight / 2, crearTexturaCalavera(this))
+      .setDisplaySize(12, 11).setScrollFactor(0).setDepth(51);
+    this.bossHealthText = this.add.text(bossBarX + barWidth / 2 + 8, bossBarY + barHeight / 2, '', {
+      fontSize: '11px', fill: '#ffffff', fontStyle: 'bold', fontFamily: 'Arial'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
+    this.updateBossHealthBar = () => {
+      this.bossHealthBar.clear();
+      const w = Math.max(0, (this.bossHealth / this.bossHealthMax) * barWidth);
+      this.bossHealthBar.fillStyle(0x9932cc, 1).fillRect(bossBarX, bossBarY, w, barHeight);
+      this.bossHealthText.setText(`${Math.max(0, this.bossHealth)} / ${this.bossHealthMax}`);
+    };
+    this.updateBossHealthBar();
 
     // Movimiento aleatorio del jefe cada 2s
     this.time.addEvent({
@@ -1473,6 +1532,7 @@ class GameScene extends Phaser.Scene {
       if (this.bossIsDying) return;   // ignorar balas durante la muerte
       bullet.destroy();
       this.bossHealth -= this.estadisticas.danoActual;
+      this.updateBossHealthBar();
 
       // Animación de daño (hurt) — vuelve a flying cuando termina
       boss.anims.play('boss_hurt', true);
@@ -1641,32 +1701,6 @@ class GameOverScene extends Phaser.Scene {
     this.esVictoria = (data.puntos ?? 0) > 0;
   }
 
-  crearTexturaCalavera() {
-    const clave = 'calaveraPixel';
-    if (this.textures.exists(clave)) return clave;
-    const patron = [
-      [0,0,0,0,1,1,1,1,1,0,0,0,0],
-      [0,0,1,1,1,1,1,1,1,1,1,0,0],
-      [0,1,1,1,1,1,1,1,1,1,1,1,0],
-      [1,1,1,1,1,1,1,1,1,1,1,1,1],
-      [1,1,2,2,1,1,1,1,1,2,2,1,1],
-      [1,1,2,2,1,1,1,1,1,2,2,1,1],
-      [1,1,1,1,1,2,1,2,1,1,1,1,1],
-      [1,1,1,1,1,1,1,1,1,1,1,1,1],
-      [0,1,1,1,1,1,1,1,1,1,1,1,0],
-      [0,1,2,1,2,1,2,1,2,1,2,1,0],
-      [0,0,1,1,1,1,1,1,1,1,1,0,0],
-      [0,0,0,1,1,1,1,1,1,1,0,0,0]
-    ];
-    const cell = 6;
-    const g = this.add.graphics();
-    g.fillStyle(0xffffff, 1);
-    patron.forEach((fila, y) => fila.forEach((v, x) => { if (v === 1) g.fillRect(x*cell, y*cell, cell, cell); }));
-    g.generateTexture(clave, patron[0].length * cell, patron.length * cell);
-    g.destroy();
-    return clave;
-  }
-
   create() {
     this.add.rectangle(240, 160, 480, 320, 0x000000, 0.92);
 
@@ -1679,7 +1713,7 @@ class GameOverScene extends Phaser.Scene {
       this.add.text(240, 50, 'FIN DE LA PARTIDA', {
         fontSize: '26px', fill: '#ff2222', fontStyle: 'bold', stroke: '#000000', strokeThickness: 5
       }).setOrigin(0.5);
-      this.add.image(240, 120, this.crearTexturaCalavera()).setScale(1.2);
+      this.add.image(240, 120, crearTexturaCalavera(this)).setScale(1.2);
     }
 
     this.add.text(240, 195, 'Puntuación:', {

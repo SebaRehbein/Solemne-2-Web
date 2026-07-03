@@ -237,11 +237,11 @@ Frontend:
 
 **Tareas planificadas:**
 
-* [ ] Último git push antes del cierre (verificar que la última versión está en main)
+* [x] Último git push antes del cierre (verificar que la última versión está en main)
 * [x] Confirmar que docker compose up --build levanta los tres servicios sin errores
 * [x] Confirmar que GitHub Actions pasa (verde) en el último commit
 * [x] Revisar que los links de DockerHub en el README apuntan a las imágenes correctas
-* [ ] Control de avance individual (preparar explicación del código propio)
+* [x] Control de avance individual (preparar explicación del código propio)
 
 **Lo que se logró:**
 
@@ -253,9 +253,12 @@ Frontend:
 * [ ] crear habilidad especial para SHURI.
 * [ ] crear habilidad especial para TYSON.
 * [ ] crear habilidad especial para FROG.
-* [ ] crear skin y animaciones para el jefe.
-* [ ] diseñar barra de vida para el jefe.
+* [x] crear skin y animaciones para el jefe.
+* [x] diseñar barra de vida para el jefe.
 * [x] eliminar mensajes emergentes desde buscador e implementarlos dentro del juego.
 * [ ] crear assets para titulos y botones.
 * [x] mejorar e implementar bien las mecanicas de movilidad.
 * [x] implementar intruccion sobre el juego al pie de la pantalla.
+---
+- mejoras restantes no se implementaron por falta de tiempo y complejidad al diseñar.
+---
