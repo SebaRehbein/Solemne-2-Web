@@ -177,24 +177,21 @@ function calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido }
 // 6 animaciones, disparo, dash, wall-jump, triple salto, pausa ESC,
 // envío de puntaje. Zona de salida por chequeo manual (confiable).
 // ==============================================================================
+// ==============================================================================
+// NivelUnoScene: mapa_1.tmj
+// Flujo: → NivelDosScene
+// ==============================================================================
 class NivelUnoScene extends Phaser.Scene {
-  constructor() {
-    super({ key: 'NivelUnoScene' });
-  }
-
-  init(data) {
-    this.personajeSeleccionado = data.personaje || 'Shuri';
-  }
+  constructor() { super({ key: 'NivelUnoScene' }); }
+  init(data) { this.personajeSeleccionado = data.personaje || 'Shuri'; }
 
   preload() {
     const char = this.personajeSeleccionado;
-
     this.load.tilemapTiledJSON('mapa_nivel1', 'assets/mapa_inicial/mapa_1.tmj');
-    this.load.image('tiles_terreno', 'assets/Terrain (16x16).png');
-    this.load.image('tiles_magma',   'assets/MAGAMA.png');
-    this.load.image('tiles_pinchoAr','assets/pinchoAr.png');
-    this.load.image('tiles_pinchoAb','assets/pinchoAb.png');
-
+    this.load.image('tiles_terreno_n1', 'assets/Terrain (16x16).png');
+    this.load.image('tiles_magma_n1',   'assets/MAGAMA.png');
+    this.load.image('tiles_pinchoAr_n1','assets/pinchoAr.png');
+    this.load.image('tiles_pinchoAb_n1','assets/pinchoAb.png');
     this.load.spritesheet(`${char}_idle`,        `assets/animaciones/Main_Characters/${char}/Idle (32x32).png`,        { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet(`${char}_walk`,        `assets/animaciones/Main_Characters/${char}/Run (32x32).png`,         { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet(`${char}_jump`,        `assets/animaciones/Main_Characters/${char}/Jump (32x32).png`,        { frameWidth: 32, frameHeight: 32 });
@@ -204,13 +201,11 @@ class NivelUnoScene extends Phaser.Scene {
   }
 
   create() {
-    try {
-      this._crearEscena();
-    } catch (error) {
-      console.error('[NivelUno] ERROR EN create():', error);
-      this.add.text(240, 160, `ERROR:\n${error.message}`, {
-        fontSize: '14px', fill: '#ff0000', backgroundColor: '#000000', align: 'center'
-      }).setOrigin(0.5).setDepth(999);
+    try { this._crearEscena(); }
+    catch (e) {
+      console.error('[NivelUnoScene] ERROR:', e);
+      this.add.text(240, 160, `ERROR:
+${e.message}`, { fontSize:'14px', fill:'#ff0000', backgroundColor:'#000', align:'center' }).setOrigin(0.5).setDepth(999);
     }
   }
 
@@ -222,15 +217,16 @@ class NivelUnoScene extends Phaser.Scene {
 
     const map = this.make.tilemap({ key: 'mapa_nivel1' });
 
-    this.textures.get('tiles_pinchoAr').setFilter(Phaser.Textures.FilterMode.NEAREST);
-    this.textures.get('tiles_pinchoAb').setFilter(Phaser.Textures.FilterMode.NEAREST);
-    this._aplicarColorKeyBlanco('tiles_pinchoAr');
-    this._aplicarColorKeyBlanco('tiles_pinchoAb');
+    // Transparencia blanca de pinchos
+    ['tiles_pinchoAr_n1', 'tiles_pinchoAb_n1'].forEach(k => {
+      this.textures.get(k).setFilter(Phaser.Textures.FilterMode.NEAREST);
+      this._aplicarColorKeyBlanco(k);
+    });
 
-    const tsTerreno  = map.addTilesetImage('terreno',       'tiles_terreno');
-    const tsLava     = map.addTilesetImage('lava',          'tiles_magma');
-    const tsPinchoAr = map.addTilesetImage('pincho arriba', 'tiles_pinchoAr');
-    const tsPinchoAb = map.addTilesetImage('pincho abajo',  'tiles_pinchoAb');
+    const tsTerreno  = map.addTilesetImage('terreno',  'tiles_terreno_n1');
+    const tsLava     = map.addTilesetImage('lava',     'tiles_magma_n1');
+    const tsPinchoAr = map.addTilesetImage('pincho arriba', 'tiles_pinchoAr_n1');
+    const tsPinchoAb = map.addTilesetImage('pincho abajo', 'tiles_pinchoAb_n1');
     const tilesets   = [tsTerreno, tsLava, tsPinchoAr, tsPinchoAb].filter(Boolean);
 
     const capaTerreno = map.createLayer('terreno', tilesets, 0, 0);
@@ -241,10 +237,16 @@ class NivelUnoScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.setBackgroundColor('#87CEEB');
 
+    // Spawn y zona de salida
     const capaEntidades = map.getObjectLayer('entidades');
-    const puntoSpawn    = capaEntidades?.objects.find(obj => obj.name === 'spawn_jugador');
+    const puntoSpawn    = capaEntidades?.objects.find(o => o.name === 'spawn_jugador');
     const spawnX = puntoSpawn ? puntoSpawn.x : 50;
     const spawnY = puntoSpawn ? puntoSpawn.y : 50;
+    const zonaSalidaObj = capaEntidades?.objects.find(o => o.name === 'zona_salida');
+    this.zonaSalidaRect = zonaSalidaObj ? {
+      left: zonaSalidaObj.x - 8, right: zonaSalidaObj.x + zonaSalidaObj.width + 8,
+      top:  zonaSalidaObj.y - 8, bottom: zonaSalidaObj.y + zonaSalidaObj.height + 8
+    } : null;
 
     // Barra de vida
     this.playerHealth = this.estadisticas.vidaMaxima;
@@ -254,7 +256,7 @@ class NivelUnoScene extends Phaser.Scene {
     this.healthBg.fillStyle(0x000000, 0.6).fillRect(barX, barY, barWidth, barHeight);
     this.healthBg.lineStyle(1, 0xffffff, 1).strokeRect(barX, barY, barWidth, barHeight);
     this.healthBar  = this.add.graphics().setScrollFactor(0).setDepth(50);
-    this.healthText = this.add.text(barX + barWidth / 2, barY + barHeight / 2, '', {
+    this.healthText = this.add.text(barX + barWidth/2, barY + barHeight/2, '', {
       fontSize: '11px', fill: '#ffffff', fontStyle: 'bold', fontFamily: 'Arial'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
     this.updateHealthBar = () => {
@@ -267,82 +269,66 @@ class NivelUnoScene extends Phaser.Scene {
 
     // Animaciones
     const char = this.personajeSeleccionado;
-    const listaAnims = ['idle', 'walk', 'jump', 'fall', 'double-jump', 'wall-jump'];
-    listaAnims.forEach(a => { if (this.anims.exists(`${char}_${a}`)) this.anims.remove(`${char}_${a}`); });
-    this.anims.create({ key: `${char}_idle`,        frames: this.anims.generateFrameNumbers(`${char}_idle`),        frameRate: 10, repeat: -1 });
-    this.anims.create({ key: `${char}_walk`,        frames: this.anims.generateFrameNumbers(`${char}_walk`),        frameRate: 15, repeat: -1 });
-    this.anims.create({ key: `${char}_jump`,        frames: this.anims.generateFrameNumbers(`${char}_jump`),        frameRate: 10, repeat:  0 });
-    this.anims.create({ key: `${char}_fall`,        frames: this.anims.generateFrameNumbers(`${char}_fall`),        frameRate: 10, repeat: -1 });
-    this.anims.create({ key: `${char}_double-jump`, frames: this.anims.generateFrameNumbers(`${char}_double-jump`), frameRate: 15, repeat:  0 });
-    this.anims.create({ key: `${char}_wall-jump`,   frames: this.anims.generateFrameNumbers(`${char}_wall-jump`),   frameRate: 15, repeat: -1 });
+    ['idle','walk','jump','fall','double-jump','wall-jump'].forEach(a => {
+      if (this.anims.exists(`${char}_${a}`)) this.anims.remove(`${char}_${a}`);
+    });
+    this.anims.create({ key:`${char}_idle`,        frames:this.anims.generateFrameNumbers(`${char}_idle`),        frameRate:10, repeat:-1 });
+    this.anims.create({ key:`${char}_walk`,        frames:this.anims.generateFrameNumbers(`${char}_walk`),        frameRate:15, repeat:-1 });
+    this.anims.create({ key:`${char}_jump`,        frames:this.anims.generateFrameNumbers(`${char}_jump`),        frameRate:10, repeat: 0 });
+    this.anims.create({ key:`${char}_fall`,        frames:this.anims.generateFrameNumbers(`${char}_fall`),        frameRate:10, repeat:-1 });
+    this.anims.create({ key:`${char}_double-jump`, frames:this.anims.generateFrameNumbers(`${char}_double-jump`), frameRate:15, repeat: 0 });
+    this.anims.create({ key:`${char}_wall-jump`,   frames:this.anims.generateFrameNumbers(`${char}_wall-jump`),   frameRate:15, repeat:-1 });
 
-    if      (char === 'Shuri') this.player = new Shuri(this, spawnX, spawnY);
-    else if (char === 'Tyson') this.player = new Tyson(this, spawnX, spawnY);
-    else                       this.player = new Frog (this, spawnX, spawnY);
-
+    // Jugador
+    if      (char==='Shuri') this.player = new Shuri(this, spawnX, spawnY);
+    else if (char==='Tyson') this.player = new Tyson(this, spawnX, spawnY);
+    else                     this.player = new Frog (this, spawnX, spawnY);
     this.player.anims.play(`${char}_idle`);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.physics.add.collider(this.player, capaTerreno);
     this.isDashing = false;
+    this.spawnX = spawnX; this.spawnY = spawnY;
 
     // Disparos
     if (!this.textures.exists('balaTextura')) {
       const g = this.add.graphics();
-      g.fillStyle(0x000000, 1).fillCircle(4, 4, 4);
-      g.fillStyle(0xff0000, 1).fillCircle(4, 4, 2);
-      g.generateTexture('balaTextura', 8, 8);
-      g.destroy();
+      g.fillStyle(0x000000,1).fillCircle(4,4,4);
+      g.fillStyle(0xff0000,1).fillCircle(4,4,2);
+      g.generateTexture('balaTextura',8,8); g.destroy();
     }
-    this.bullets = this.physics.add.group({ defaultKey: 'balaTextura', maxSize: 20 });
-    this.physics.add.collider(this.bullets, capaTerreno, (bala) => bala.destroy());
-    this.input.on('pointerdown', (pointer) => {
+    this.bullets = this.physics.add.group({ defaultKey:'balaTextura', maxSize:20 });
+    this.physics.add.collider(this.bullets, capaTerreno, b => b.destroy());
+    this.input.on('pointerdown', pointer => {
       const bullet = this.bullets.get(this.player.x, this.player.y);
       if (bullet) {
         bullet.setActive(true).setVisible(true);
         bullet.body.setAllowGravity(false);
-        const mouseX = pointer.x + this.cameras.main.scrollX;
-        const mouseY = pointer.y + this.cameras.main.scrollY;
-        const angle  = Phaser.Math.Angle.Between(this.player.x, this.player.y, mouseX, mouseY);
+        const angle = Phaser.Math.Angle.Between(
+          this.player.x, this.player.y,
+          pointer.x + this.cameras.main.scrollX,
+          pointer.y + this.cameras.main.scrollY
+        );
         this.physics.velocityFromRotation(angle, 400, bullet.body.velocity);
       }
     });
 
-    // Daño con pinchos y lava
-    // gid 243 = lava (muerte instantánea), 244 = pincho arriba, 245 = pincho abajo
+    // Daño
     this.tiempoUltimoDano = -99999;
     this.DURACION_INV     = 600;
-    this.GIDS_PINCHO      = [244, 245]; // pinchos: restan 20 vida
-    this.GIDS_LAVA        = [243];      // lava: muerte instantánea
+    this.GIDS_PINCHO      = [244, 245];
+    this.GIDS_LAVA        = [243];
     this.capaTrampasRef   = capaTrampas;
-    this.spawnX           = spawnX;
-    this.spawnY           = spawnY;
-
-    // Zona de salida — ampliamos el rect 8px en cada lado para compensar
-    // posibles offsets del body y hacer la zona más fácil de activar
-    const zonaSalidaObj = capaEntidades?.objects.find(obj => obj.name === 'zona_salida');
-    const MARGEN_ZONA = 8;
-    this.zonaSalidaRect = zonaSalidaObj ? {
-      left:   zonaSalidaObj.x - MARGEN_ZONA,
-      right:  zonaSalidaObj.x + zonaSalidaObj.width  + MARGEN_ZONA,
-      top:    zonaSalidaObj.y - MARGEN_ZONA,
-      bottom: zonaSalidaObj.y + zonaSalidaObj.height + MARGEN_ZONA
-    } : null;
 
     // Controles
-    const configControles = this.registry.get('controles') || { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
-    const resolverCodigo  = (nombre, defecto) =>
-      Phaser.Input.Keyboard.KeyCodes[nombre] ?? Phaser.Input.Keyboard.KeyCodes[defecto];
+    const cfg = this.registry.get('controles') || { ARRIBA:'W', IZQUIERDA:'A', ABAJO:'S', DERECHA:'D' };
+    const k   = (n,d) => Phaser.Input.Keyboard.KeyCodes[n] ?? Phaser.Input.Keyboard.KeyCodes[d];
     this.teclas = this.input.keyboard.addKeys({
-      ARRIBA:    resolverCodigo(configControles.ARRIBA,    'W'),
-      IZQUIERDA: resolverCodigo(configControles.IZQUIERDA, 'A'),
-      ABAJO:     resolverCodigo(configControles.ABAJO,     'S'),
-      DERECHA:   resolverCodigo(configControles.DERECHA,   'D'),
+      ARRIBA:    k(cfg.ARRIBA,'W'), IZQUIERDA: k(cfg.IZQUIERDA,'A'),
+      ABAJO:     k(cfg.ABAJO,'S'),  DERECHA:    k(cfg.DERECHA,'D'),
       SHIFT:     Phaser.Input.Keyboard.KeyCodes.SHIFT
     });
     this.teclasFlechas = this.input.keyboard.createCursorKeys();
     this.player.jumpCount = 0;
-
-    // Pausa ESC
     this.input.keyboard.on('keydown-ESC', () => {
       this.scene.pause();
       this.scene.launch('PauseScene', { sceneKey: 'NivelUnoScene' });
@@ -350,36 +336,27 @@ class NivelUnoScene extends Phaser.Scene {
   }
 
   _aplicarColorKeyBlanco(claveTextura) {
-    const textura = this.textures.get(claveTextura);
-    const fuente  = textura.getSourceImage();
-    const canvas  = document.createElement('canvas');
-    canvas.width  = fuente.width;
-    canvas.height = fuente.height;
-    const ctx     = canvas.getContext('2d');
-    ctx.drawImage(fuente, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const datos     = imageData.data;
-    for (let i = 0; i < datos.length; i += 4) {
-      if (datos[i] > 240 && datos[i+1] > 240 && datos[i+2] > 240) datos[i+3] = 0;
-    }
-    ctx.putImageData(imageData, 0, 0);
+    const tex = this.textures.get(claveTextura);
+    const src = tex.getSourceImage();
+    const cv  = document.createElement('canvas');
+    cv.width = src.width; cv.height = src.height;
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(src, 0, 0);
+    const id = ctx.getImageData(0,0,cv.width,cv.height);
+    const d  = id.data;
+    for (let i=0; i<d.length; i+=4) { if(d[i]>240&&d[i+1]>240&&d[i+2]>240) d[i+3]=0; }
+    ctx.putImageData(id,0,0);
     this.textures.remove(claveTextura);
-    this.textures.addCanvas(claveTextura, canvas);
+    this.textures.addCanvas(claveTextura, cv);
   }
 
-  // Calcula el puntaje siempre (para poder mostrarlo en GameOverScene aunque
-  // no haya sesión iniciada) y solo lo envía al backend si hay un usuario
-  // logueado; si juega sin cuenta, el progreso simplemente no se guarda.
   enviarPuntaje(nivelAlcanzado) {
     const tiempoSegundos = Math.round((this.time.now - this.tiempoInicio) / 1000);
     const puntos = calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal });
-
     if (this.registry.get('usuarioActual')) {
-      api.post('/scores', {
-        nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal
-      }).catch(err => console.error('No se pudo guardar el puntaje:', err));
+      api.post('/scores', { nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal })
+         .catch(e => console.error('No se pudo guardar el puntaje:', e));
     }
-
     return puntos;
   }
 
@@ -393,35 +370,27 @@ class NivelUnoScene extends Phaser.Scene {
 
     // Pinchos y lava
     {
-      const cuerpo = this.player.body;
-      const ahora  = this.time.now;
+      const b = this.player.body, ahora = this.time.now;
       if (ahora - this.tiempoUltimoDano >= this.DURACION_INV) {
         const puntos = [
-          [cuerpo.left+5,cuerpo.top+5],[cuerpo.right-5,cuerpo.top+5],
-          [cuerpo.left+5,cuerpo.bottom-5],[cuerpo.right-5,cuerpo.bottom-5],
-          [cuerpo.center.x,cuerpo.center.y]
+          [b.left+5,b.top+5],[b.right-5,b.top+5],
+          [b.left+5,b.bottom-5],[b.right-5,b.bottom-5],
+          [b.center.x,b.center.y]
         ];
-        for (const [px, py] of puntos) {
+        for (const [px,py] of puntos) {
           const tile = this.capaTrampasRef.getTileAtWorldXY(px, py, true);
           if (!tile) continue;
-
-          // Lava (gid 243): muerte instantánea, vuelve al spawn
           if (this.GIDS_LAVA.includes(tile.index)) {
-            this.tiempoUltimoDano   = ahora;
+            this.tiempoUltimoDano = ahora;
             this.danoRecibidoTotal += this.playerHealth;
-            this.playerHealth       = 0;
+            this.playerHealth = 0;
             this.updateHealthBar();
-            this.player.setPosition(this.spawnX, this.spawnY);
-            this.player.setVelocity(0, 0);
-            this.player.setTint(0xff6600);
             this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
             return;
           }
-
-          // Pinchos (gid 244/245): restan 20 vida, vuelven al spawn
           if (this.GIDS_PINCHO.includes(tile.index)) {
-            this.tiempoUltimoDano   = ahora;
-            this.playerHealth      -= 20;
+            this.tiempoUltimoDano = ahora;
+            this.playerHealth -= 20;
             this.danoRecibidoTotal += 20;
             this.updateHealthBar();
             this.player.setPosition(this.spawnX, this.spawnY);
@@ -437,14 +406,303 @@ class NivelUnoScene extends Phaser.Scene {
       }
     }
 
-    // Zona de salida — chequeamos bordes del body además del centro
+    // Zona de salida
     if (this.zonaSalidaRect) {
-      const b  = this.player.body;
-      const z  = this.zonaSalidaRect;
-      // Cualquier punto del body que entre en la zona activa la transición
-      const dentroX = b.right > z.left && b.left < z.right;
-      const dentroY = b.bottom > z.top && b.top < z.bottom;
-      if (dentroX && dentroY) {
+      const b = this.player.body, z = this.zonaSalidaRect;
+      if (b.right > z.left && b.left < z.right && b.bottom > z.top && b.top < z.bottom) {
+        this.scene.start('NivelDosScene', { personaje: this.personajeSeleccionado });
+        return;
+      }
+    }
+
+    // Dash
+    if (this.estadisticas.mecanicasMovilidad.nivel3 && Phaser.Input.Keyboard.JustDown(this.teclas.SHIFT)) {
+      this.isDashing = true;
+      const dir = this.player.flipX ? -1 : 1;
+      this.player.setVelocityX(dir*800);
+      this.player.body.setAllowGravity(false);
+      this.player.setVelocityY(0);
+      this.time.delayedCall(200, () => { this.isDashing=false; this.player.body.setAllowGravity(true); });
+      return;
+    }
+
+    const moverIzq = this.teclas.IZQUIERDA.isDown || this.teclasFlechas.left.isDown;
+    const moverDer = this.teclas.DERECHA.isDown   || this.teclasFlechas.right.isDown;
+    const salto    = Phaser.Input.Keyboard.JustDown(this.teclas.ARRIBA) ||
+                     Phaser.Input.Keyboard.JustDown(this.teclasFlechas.up);
+
+    if      (moverIzq) { this.player.setVelocityX(-this.player.velocidadX); this.player.flipX=true;  }
+    else if (moverDer) { this.player.setVelocityX( this.player.velocidadX); this.player.flipX=false; }
+    else               { this.player.setVelocityX(0); }
+
+    const enSuelo = this.player.body.onFloor() || this.player.body.touching.down;
+    const enPared = this.player.body.blocked.left || this.player.body.blocked.right;
+    if (enSuelo && this.player.body.velocity.y >= 0) this.player.jumpCount = 0;
+
+    let maxSaltos = 2;
+    if (this.estadisticas.mecanicasMovilidad.nivel2) maxSaltos = 3;
+    if (salto) {
+      if (this.player.jumpCount === 0) {
+        this.player.setVelocityY(this.player.fuerzaSalto); this.player.jumpCount=1;
+      } else if (this.estadisticas.mecanicasMovilidad.nivel1 && enPared) {
+        this.player.setVelocityY(this.player.fuerzaSalto); this.player.jumpCount=1;
+        const empuje = this.player.body.blocked.left ? 200 : -200;
+        this.player.setVelocityX(empuje); this.player.flipX = this.player.body.blocked.left;
+      } else if (this.player.jumpCount > 0 && this.player.jumpCount < maxSaltos) {
+        this.player.setVelocityY(this.player.fuerzaDobleSalto); this.player.jumpCount++;
+      }
+    }
+
+    if (!enSuelo) {
+      if (this.estadisticas.mecanicasMovilidad.nivel1 && enPared && this.player.body.velocity.y>0) {
+        this.player.anims.play(`${char}_wall-jump`, true);
+      } else if (this.player.body.velocity.y < 0) {
+        this.player.anims.play(this.player.jumpCount>=2 ? `${char}_double-jump` : `${char}_jump`, true);
+      } else {
+        this.player.anims.play(`${char}_fall`, true);
+      }
+    } else if (this.player.body.velocity.x !== 0) {
+      this.player.anims.play(`${char}_walk`, true);
+    } else {
+      this.player.anims.play(`${char}_idle`, true);
+    }
+  }
+}
+
+
+// ==============================================================================
+// NivelDosScene: mapa_0.tmj
+// Flujo: → NivelTresScene
+// ==============================================================================
+class NivelDosScene extends Phaser.Scene {
+  constructor() { super({ key: 'NivelDosScene' }); }
+  init(data) { this.personajeSeleccionado = data.personaje || 'Shuri'; }
+
+  preload() {
+    const char = this.personajeSeleccionado;
+    this.load.tilemapTiledJSON('mapa_nivel0', 'assets/mapa_inicial/mapa_0.tmj');
+    this.load.image('tiles_terreno_n2', 'assets/Terrain (16x16).png');
+    this.load.image('tiles_magma_n2',   'assets/MAGAMA.png');
+    this.load.image('tiles_pinchoAr_n2','assets/pinchoAr.png');
+    this.load.image('tiles_pinchoAb_n2','assets/pinchoAb.png');
+    this.load.spritesheet(`${char}_idle`,        `assets/animaciones/Main_Characters/${char}/Idle (32x32).png`,        { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_walk`,        `assets/animaciones/Main_Characters/${char}/Run (32x32).png`,         { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_jump`,        `assets/animaciones/Main_Characters/${char}/Jump (32x32).png`,        { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_fall`,        `assets/animaciones/Main_Characters/${char}/Fall (32x32).png`,        { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_double-jump`, `assets/animaciones/Main_Characters/${char}/Double Jump (32x32).png`, { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(`${char}_wall-jump`,   `assets/animaciones/Main_Characters/${char}/Wall Jump (32x32).png`,   { frameWidth: 32, frameHeight: 32 });
+  }
+
+  create() {
+    try { this._crearEscena(); }
+    catch (e) {
+      console.error('[NivelDosScene] ERROR:', e);
+      this.add.text(240, 160, `ERROR:
+${e.message}`, { fontSize:'14px', fill:'#ff0000', backgroundColor:'#000', align:'center' }).setOrigin(0.5).setDepth(999);
+    }
+  }
+
+  _crearEscena() {
+    this.gestor       = this.registry.get('gestorProgreso');
+    this.estadisticas = this.gestor.obtenerEstadisticasDe(this.personajeSeleccionado);
+    this.tiempoInicio      = this.time.now;
+    this.danoRecibidoTotal = 0;
+
+    const map = this.make.tilemap({ key: 'mapa_nivel0' });
+
+    // Transparencia blanca de pinchos
+    ['tiles_pinchoAr_n2', 'tiles_pinchoAb_n2'].forEach(k => {
+      this.textures.get(k).setFilter(Phaser.Textures.FilterMode.NEAREST);
+      this._aplicarColorKeyBlanco(k);
+    });
+
+    const tsTerreno  = map.addTilesetImage('terreno',  'tiles_terreno_n2');
+    const tsLava     = map.addTilesetImage('lava',     'tiles_magma_n2');
+    const tsPinchoAr = map.addTilesetImage('pincho arriba', 'tiles_pinchoAr_n2');
+    const tsPinchoAb = map.addTilesetImage('pincho abajo', 'tiles_pinchoAb_n2');
+    const tilesets   = [tsTerreno, tsLava, tsPinchoAr, tsPinchoAb].filter(Boolean);
+
+    const capaTerreno = map.createLayer('terreno', tilesets, 0, 0);
+    capaTerreno.setCollisionByExclusion([-1]);
+    const capaTrampas = map.createLayer('trampas', tilesets, 0, 0);
+
+    this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+    this.cameras.main.setBackgroundColor('#87CEEB');
+
+    // Spawn y zona de salida
+    const capaEntidades = map.getObjectLayer('entidades');
+    const puntoSpawn    = capaEntidades?.objects.find(o => o.name === 'spawn_jugador');
+    const spawnX = puntoSpawn ? puntoSpawn.x : 50;
+    const spawnY = puntoSpawn ? puntoSpawn.y : 50;
+    const zonaSalidaObj = capaEntidades?.objects.find(o => o.name === 'zona_salida');
+    this.zonaSalidaRect = zonaSalidaObj ? {
+      left: zonaSalidaObj.x - 8, right: zonaSalidaObj.x + zonaSalidaObj.width + 8,
+      top:  zonaSalidaObj.y - 8, bottom: zonaSalidaObj.y + zonaSalidaObj.height + 8
+    } : null;
+
+    // Barra de vida
+    this.playerHealth = this.estadisticas.vidaMaxima;
+    this.maxHealth    = this.estadisticas.vidaMaxima;
+    const barX = 10, barY = 10, barWidth = 150, barHeight = 15;
+    this.healthBg = this.add.graphics().setScrollFactor(0).setDepth(50);
+    this.healthBg.fillStyle(0x000000, 0.6).fillRect(barX, barY, barWidth, barHeight);
+    this.healthBg.lineStyle(1, 0xffffff, 1).strokeRect(barX, barY, barWidth, barHeight);
+    this.healthBar  = this.add.graphics().setScrollFactor(0).setDepth(50);
+    this.healthText = this.add.text(barX + barWidth/2, barY + barHeight/2, '', {
+      fontSize: '11px', fill: '#ffffff', fontStyle: 'bold', fontFamily: 'Arial'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
+    this.updateHealthBar = () => {
+      this.healthBar.clear();
+      const w = Math.max(0, (this.playerHealth / this.maxHealth) * barWidth);
+      this.healthBar.fillStyle(0xff0000, 1).fillRect(barX, barY, w, barHeight);
+      this.healthText.setText(`♥ ${Math.max(0, this.playerHealth)} / ${this.maxHealth}`);
+    };
+    this.updateHealthBar();
+
+    // Animaciones
+    const char = this.personajeSeleccionado;
+    ['idle','walk','jump','fall','double-jump','wall-jump'].forEach(a => {
+      if (this.anims.exists(`${char}_${a}`)) this.anims.remove(`${char}_${a}`);
+    });
+    this.anims.create({ key:`${char}_idle`,        frames:this.anims.generateFrameNumbers(`${char}_idle`),        frameRate:10, repeat:-1 });
+    this.anims.create({ key:`${char}_walk`,        frames:this.anims.generateFrameNumbers(`${char}_walk`),        frameRate:15, repeat:-1 });
+    this.anims.create({ key:`${char}_jump`,        frames:this.anims.generateFrameNumbers(`${char}_jump`),        frameRate:10, repeat: 0 });
+    this.anims.create({ key:`${char}_fall`,        frames:this.anims.generateFrameNumbers(`${char}_fall`),        frameRate:10, repeat:-1 });
+    this.anims.create({ key:`${char}_double-jump`, frames:this.anims.generateFrameNumbers(`${char}_double-jump`), frameRate:15, repeat: 0 });
+    this.anims.create({ key:`${char}_wall-jump`,   frames:this.anims.generateFrameNumbers(`${char}_wall-jump`),   frameRate:15, repeat:-1 });
+
+    // Jugador
+    if      (char==='Shuri') this.player = new Shuri(this, spawnX, spawnY);
+    else if (char==='Tyson') this.player = new Tyson(this, spawnX, spawnY);
+    else                     this.player = new Frog (this, spawnX, spawnY);
+    this.player.anims.play(`${char}_idle`);
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.physics.add.collider(this.player, capaTerreno);
+    this.isDashing = false;
+    this.spawnX = spawnX; this.spawnY = spawnY;
+
+    // Disparos
+    if (!this.textures.exists('balaTextura')) {
+      const g = this.add.graphics();
+      g.fillStyle(0x000000,1).fillCircle(4,4,4);
+      g.fillStyle(0xff0000,1).fillCircle(4,4,2);
+      g.generateTexture('balaTextura',8,8); g.destroy();
+    }
+    this.bullets = this.physics.add.group({ defaultKey:'balaTextura', maxSize:20 });
+    this.physics.add.collider(this.bullets, capaTerreno, b => b.destroy());
+    this.input.on('pointerdown', pointer => {
+      const bullet = this.bullets.get(this.player.x, this.player.y);
+      if (bullet) {
+        bullet.setActive(true).setVisible(true);
+        bullet.body.setAllowGravity(false);
+        const angle = Phaser.Math.Angle.Between(
+          this.player.x, this.player.y,
+          pointer.x + this.cameras.main.scrollX,
+          pointer.y + this.cameras.main.scrollY
+        );
+        this.physics.velocityFromRotation(angle, 400, bullet.body.velocity);
+      }
+    });
+
+    // Daño
+    this.tiempoUltimoDano = -99999;
+    this.DURACION_INV     = 600;
+    this.GIDS_PINCHO      = [244, 245];
+    this.GIDS_LAVA        = [243];
+    this.capaTrampasRef   = capaTrampas;
+
+    // Controles
+    const cfg = this.registry.get('controles') || { ARRIBA:'W', IZQUIERDA:'A', ABAJO:'S', DERECHA:'D' };
+    const k   = (n,d) => Phaser.Input.Keyboard.KeyCodes[n] ?? Phaser.Input.Keyboard.KeyCodes[d];
+    this.teclas = this.input.keyboard.addKeys({
+      ARRIBA:    k(cfg.ARRIBA,'W'), IZQUIERDA: k(cfg.IZQUIERDA,'A'),
+      ABAJO:     k(cfg.ABAJO,'S'),  DERECHA:    k(cfg.DERECHA,'D'),
+      SHIFT:     Phaser.Input.Keyboard.KeyCodes.SHIFT
+    });
+    this.teclasFlechas = this.input.keyboard.createCursorKeys();
+    this.player.jumpCount = 0;
+    this.input.keyboard.on('keydown-ESC', () => {
+      this.scene.pause();
+      this.scene.launch('PauseScene', { sceneKey: 'NivelDosScene' });
+    });
+  }
+
+  _aplicarColorKeyBlanco(claveTextura) {
+    const tex = this.textures.get(claveTextura);
+    const src = tex.getSourceImage();
+    const cv  = document.createElement('canvas');
+    cv.width = src.width; cv.height = src.height;
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(src, 0, 0);
+    const id = ctx.getImageData(0,0,cv.width,cv.height);
+    const d  = id.data;
+    for (let i=0; i<d.length; i+=4) { if(d[i]>240&&d[i+1]>240&&d[i+2]>240) d[i+3]=0; }
+    ctx.putImageData(id,0,0);
+    this.textures.remove(claveTextura);
+    this.textures.addCanvas(claveTextura, cv);
+  }
+
+  enviarPuntaje(nivelAlcanzado) {
+    const tiempoSegundos = Math.round((this.time.now - this.tiempoInicio) / 1000);
+    const puntos = calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal });
+    if (this.registry.get('usuarioActual')) {
+      api.post('/scores', { nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal })
+         .catch(e => console.error('No se pudo guardar el puntaje:', e));
+    }
+    return puntos;
+  }
+
+  update() {
+    if (this.isDashing) return;
+    const char = this.personajeSeleccionado;
+
+    if (this.player.tintTopLeft !== 0xffffff && this.time.now - this.tiempoUltimoDano > 200) {
+      this.player.clearTint();
+    }
+
+    // Pinchos y lava
+    {
+      const b = this.player.body, ahora = this.time.now;
+      if (ahora - this.tiempoUltimoDano >= this.DURACION_INV) {
+        const puntos = [
+          [b.left+5,b.top+5],[b.right-5,b.top+5],
+          [b.left+5,b.bottom-5],[b.right-5,b.bottom-5],
+          [b.center.x,b.center.y]
+        ];
+        for (const [px,py] of puntos) {
+          const tile = this.capaTrampasRef.getTileAtWorldXY(px, py, true);
+          if (!tile) continue;
+          if (this.GIDS_LAVA.includes(tile.index)) {
+            this.tiempoUltimoDano = ahora;
+            this.danoRecibidoTotal += this.playerHealth;
+            this.playerHealth = 0;
+            this.updateHealthBar();
+            this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
+            return;
+          }
+          if (this.GIDS_PINCHO.includes(tile.index)) {
+            this.tiempoUltimoDano = ahora;
+            this.playerHealth -= 20;
+            this.danoRecibidoTotal += 20;
+            this.updateHealthBar();
+            this.player.setPosition(this.spawnX, this.spawnY);
+            this.player.setVelocity(0, 0);
+            this.player.setTint(0xff0000);
+            if (this.playerHealth <= 0) {
+              this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
+              return;
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    // Zona de salida
+    if (this.zonaSalidaRect) {
+      const b = this.player.body, z = this.zonaSalidaRect;
+      if (b.right > z.left && b.left < z.right && b.bottom > z.top && b.top < z.bottom) {
         this.scene.start('GameScene', { personaje: this.personajeSeleccionado });
         return;
       }
@@ -454,46 +712,45 @@ class NivelUnoScene extends Phaser.Scene {
     if (this.estadisticas.mecanicasMovilidad.nivel3 && Phaser.Input.Keyboard.JustDown(this.teclas.SHIFT)) {
       this.isDashing = true;
       const dir = this.player.flipX ? -1 : 1;
-      this.player.setVelocityX(dir * 800);
+      this.player.setVelocityX(dir*800);
       this.player.body.setAllowGravity(false);
       this.player.setVelocityY(0);
-      this.time.delayedCall(200, () => { this.isDashing = false; this.player.body.setAllowGravity(true); });
+      this.time.delayedCall(200, () => { this.isDashing=false; this.player.body.setAllowGravity(true); });
       return;
     }
 
-    const moverIzquierda = this.teclas.IZQUIERDA.isDown || this.teclasFlechas.left.isDown;
-    const moverDerecha   = this.teclas.DERECHA.isDown   || this.teclasFlechas.right.isDown;
-    const botonSalto     = Phaser.Input.Keyboard.JustDown(this.teclas.ARRIBA) ||
-                           Phaser.Input.Keyboard.JustDown(this.teclasFlechas.up);
+    const moverIzq = this.teclas.IZQUIERDA.isDown || this.teclasFlechas.left.isDown;
+    const moverDer = this.teclas.DERECHA.isDown   || this.teclasFlechas.right.isDown;
+    const salto    = Phaser.Input.Keyboard.JustDown(this.teclas.ARRIBA) ||
+                     Phaser.Input.Keyboard.JustDown(this.teclasFlechas.up);
 
-    if (moverIzquierda)    { this.player.setVelocityX(-this.player.velocidadX); this.player.flipX = true;  }
-    else if (moverDerecha) { this.player.setVelocityX( this.player.velocidadX); this.player.flipX = false; }
-    else                   { this.player.setVelocityX(0); }
+    if      (moverIzq) { this.player.setVelocityX(-this.player.velocidadX); this.player.flipX=true;  }
+    else if (moverDer) { this.player.setVelocityX( this.player.velocidadX); this.player.flipX=false; }
+    else               { this.player.setVelocityX(0); }
 
-    const isGrounded     = this.player.body.onFloor() || this.player.body.touching.down;
-    const isTouchingWall = this.player.body.blocked.left || this.player.body.blocked.right;
-    if (isGrounded && this.player.body.velocity.y >= 0) this.player.jumpCount = 0;
+    const enSuelo = this.player.body.onFloor() || this.player.body.touching.down;
+    const enPared = this.player.body.blocked.left || this.player.body.blocked.right;
+    if (enSuelo && this.player.body.velocity.y >= 0) this.player.jumpCount = 0;
 
-    let maxJumps = 2;
-    if (this.estadisticas.mecanicasMovilidad.nivel2) maxJumps = 3;
-
-    if (botonSalto) {
+    let maxSaltos = 2;
+    if (this.estadisticas.mecanicasMovilidad.nivel2) maxSaltos = 3;
+    if (salto) {
       if (this.player.jumpCount === 0) {
-        this.player.setVelocityY(this.player.fuerzaSalto); this.player.jumpCount = 1;
-      } else if (this.estadisticas.mecanicasMovilidad.nivel1 && isTouchingWall) {
-        this.player.setVelocityY(this.player.fuerzaSalto); this.player.jumpCount = 1;
+        this.player.setVelocityY(this.player.fuerzaSalto); this.player.jumpCount=1;
+      } else if (this.estadisticas.mecanicasMovilidad.nivel1 && enPared) {
+        this.player.setVelocityY(this.player.fuerzaSalto); this.player.jumpCount=1;
         const empuje = this.player.body.blocked.left ? 200 : -200;
         this.player.setVelocityX(empuje); this.player.flipX = this.player.body.blocked.left;
-      } else if (this.player.jumpCount > 0 && this.player.jumpCount < maxJumps) {
+      } else if (this.player.jumpCount > 0 && this.player.jumpCount < maxSaltos) {
         this.player.setVelocityY(this.player.fuerzaDobleSalto); this.player.jumpCount++;
       }
     }
 
-    if (!isGrounded) {
-      if (this.estadisticas.mecanicasMovilidad.nivel1 && isTouchingWall && this.player.body.velocity.y > 0) {
+    if (!enSuelo) {
+      if (this.estadisticas.mecanicasMovilidad.nivel1 && enPared && this.player.body.velocity.y>0) {
         this.player.anims.play(`${char}_wall-jump`, true);
       } else if (this.player.body.velocity.y < 0) {
-        this.player.anims.play(this.player.jumpCount >= 2 ? `${char}_double-jump` : `${char}_jump`, true);
+        this.player.anims.play(this.player.jumpCount>=2 ? `${char}_double-jump` : `${char}_jump`, true);
       } else {
         this.player.anims.play(`${char}_fall`, true);
       }
@@ -1002,8 +1259,6 @@ class GameScene extends Phaser.Scene {
             this.time.delayedCall(300, () => this.player.clearTint());
             if (this.playerHealth <= 0) {
                 this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) }); 
-                // murió: nivelAlcanzado simbólico = 0
-                this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
             }
         });
     }
@@ -1210,8 +1465,6 @@ class GameScene extends Phaser.Scene {
       this.time.delayedCall(200, () => player.clearTint());
       if (this.playerHealth <= 0) {
         this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) }); 
-        // murió: nivelAlcanzado simbólico = 0
-        this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
       }
     });
 
@@ -1259,9 +1512,8 @@ class GameScene extends Phaser.Scene {
   // nivelAlcanzado es, por ahora, simbólico: 1 = venció al jefe, 0 = murió.
   // Cuando se implemente el nivel principal antes del jefe, este número
   // pasará a ser un contador real de pantallas superadas.
-  // El puntaje se calcula siempre (para poder mostrarlo en GameOverScene
-  // aunque no haya sesión iniciada); solo se envía al backend si hay un
-  // usuario logueado, si no, el progreso simplemente no se guarda.
+  // Solo se envía si hay un usuario logueado (user !== null); si juega
+  // sin cuenta, el progreso simplemente no se guarda en el backend.
   enviarPuntaje(nivelAlcanzado) {
     const tiempoSegundos = Math.round((this.time.now - this.tiempoInicio) / 1000);
     const puntos = calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal });
@@ -1477,9 +1729,9 @@ class PauseScene extends Phaser.Scene {
       btn.on('pointerout', () => btn.setScale(1)); 
     });
     
-    this.input.keyboard.on('keydown-ESC', () => {
-      this.scene.resume(this.escenaAnterior);
-      this.scene.stop();
+    this.input.keyboard.on('keydown-ESC', () => { 
+      this.scene.resume(this.escenaAnterior); 
+      this.scene.stop(); 
     });
   }
 }
@@ -1531,7 +1783,7 @@ export default function App() {
         default: 'arcade',
         arcade: { gravity: { y: 800 }, debug: false }
       },
-      scene: [MenuScene, MenuSeleccion, MejorasScene, NivelUnoScene, GameScene, PauseScene, GameOverScene] 
+      scene: [MenuScene, MenuSeleccion, MejorasScene, NivelUnoScene, NivelDosScene, GameScene, PauseScene, GameOverScene] 
     };
     const game = new Phaser.Game(config);
     gameInstanceRef.current = game;
