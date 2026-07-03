@@ -169,10 +169,7 @@ function calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido }
   return Math.max(Math.round(puntos), 0);
 }
 
-<<<<<<< HEAD
 
-=======
->>>>>>> 6d7256c9da07f97f9e3af90cc1e801dec0ea75af
 // ==============================================================================
 // ==============================================================================
 // ESCENA 1: NIVEL INICIAL (mapa_1.tmj)
@@ -376,19 +373,13 @@ class NivelUnoScene extends Phaser.Scene {
   enviarPuntaje(nivelAlcanzado) {
     const tiempoSegundos = Math.round((this.time.now - this.tiempoInicio) / 1000);
     const puntos = calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal });
-<<<<<<< HEAD
-=======
 
->>>>>>> 6d7256c9da07f97f9e3af90cc1e801dec0ea75af
     if (this.registry.get('usuarioActual')) {
       api.post('/scores', {
         nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal
       }).catch(err => console.error('No se pudo guardar el puntaje:', err));
     }
-<<<<<<< HEAD
-=======
 
->>>>>>> 6d7256c9da07f97f9e3af90cc1e801dec0ea75af
     return puntos;
   }
 
@@ -896,11 +887,11 @@ class GameScene extends Phaser.Scene {
     this.load.spritesheet(`${char}_wall-jump`, `assets/animaciones/Main_Characters/${char}/Wall Jump (32x32).png`, { frameWidth: 32, frameHeight: 32 });
 
     // Sprites del jefe (Flying Demon) — frameWidth:81, frameHeight:71
-    this.load.spritesheet('boss_idle',   'assets/Boss/IDLE.png',   { frameWidth: 81, frameHeight: 71 });
-    this.load.spritesheet('boss_flying', 'assets/Boss/FLYING.png', { frameWidth: 81, frameHeight: 71 });
-    this.load.spritesheet('boss_attack', 'assets/Boss/ATTACK.png', { frameWidth: 81, frameHeight: 71 });
-    this.load.spritesheet('boss_hurt',   'assets/Boss/HURT.png',   { frameWidth: 81, frameHeight: 71 });
-    this.load.spritesheet('boss_death',  'assets/Boss/DEATH.png',  { frameWidth: 81, frameHeight: 71 });
+    this.load.spritesheet('boss_idle',   'assets/animaciones/Boss/IDLE.png',   { frameWidth: 81, frameHeight: 71 });
+    this.load.spritesheet('boss_flying', 'assets/animaciones/Boss/FLYING.png', { frameWidth: 81, frameHeight: 71 });
+    this.load.spritesheet('boss_attack', 'assets/animaciones/Boss/ATTACK.png', { frameWidth: 81, frameHeight: 71 });
+    this.load.spritesheet('boss_hurt',   'assets/animaciones/Boss/HURT.png',   { frameWidth: 81, frameHeight: 71 });
+    this.load.spritesheet('boss_death',  'assets/animaciones/Boss/DEATH.png',  { frameWidth: 81, frameHeight: 71 });
 
     // CARGAMOS EL MAPA DEL COMPAÑERO
     this.load.image('tiles-terrain', 'assets/Terrain (16x16).png');
@@ -1010,12 +1001,9 @@ class GameScene extends Phaser.Scene {
             this.player.setTint(0xffa500);
             this.time.delayedCall(300, () => this.player.clearTint());
             if (this.playerHealth <= 0) {
-<<<<<<< HEAD
                 this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) }); 
-=======
                 // murió: nivelAlcanzado simbólico = 0
                 this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
->>>>>>> 6d7256c9da07f97f9e3af90cc1e801dec0ea75af
             }
         });
     }
@@ -1221,12 +1209,9 @@ class GameScene extends Phaser.Scene {
       player.setTint(0xff0000);
       this.time.delayedCall(200, () => player.clearTint());
       if (this.playerHealth <= 0) {
-<<<<<<< HEAD
         this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) }); 
-=======
         // murió: nivelAlcanzado simbólico = 0
         this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
->>>>>>> 6d7256c9da07f97f9e3af90cc1e801dec0ea75af
       }
     });
 
@@ -1500,79 +1485,6 @@ class PauseScene extends Phaser.Scene {
 }
 
 // ==============================================================================
-// ESCENA 6: FIN DE LA PARTIDA (se muestra al morir, reemplaza el alert())
-// ==============================================================================
-class GameOverScene extends Phaser.Scene {
-  constructor() { super({ key: 'GameOverScene' }); }
-
-  init(data) {
-    this.puntos = data.puntos ?? 0;
-  }
-
-  // Genera (una sola vez) una calavera pixel-art a partir de una matriz de
-  // celdas, con el mismo enfoque que ya usa el juego para la bala y el
-  // jefe (Graphics + generateTexture): no hace falta cargar un asset nuevo.
-  // Las celdas en 0 y 2 quedan sin dibujar, así que el fondo oscuro de la
-  // pantalla se ve "a través" de ellas, formando las cuencas de los ojos,
-  // la nariz y las separaciones entre los dientes.
-  crearTexturaCalavera() {
-    const clave = 'calaveraPixel';
-    if (this.textures.exists(clave)) return clave;
-
-    const patron = [
-      [0,0,0,0,1,1,1,1,1,0,0,0,0],
-      [0,0,1,1,1,1,1,1,1,1,1,0,0],
-      [0,1,1,1,1,1,1,1,1,1,1,1,0],
-      [1,1,1,1,1,1,1,1,1,1,1,1,1],
-      [1,1,2,2,1,1,1,1,1,2,2,1,1],
-      [1,1,2,2,1,1,1,1,1,2,2,1,1],
-      [1,1,1,1,1,2,1,2,1,1,1,1,1],
-      [1,1,1,1,1,1,1,1,1,1,1,1,1],
-      [0,1,1,1,1,1,1,1,1,1,1,1,0],
-      [0,1,2,1,2,1,2,1,2,1,2,1,0],
-      [0,0,1,1,1,1,1,1,1,1,1,0,0],
-      [0,0,0,1,1,1,1,1,1,1,0,0,0]
-    ];
-    const cell = 6;
-    const graphics = this.add.graphics();
-    graphics.fillStyle(0xffffff, 1);
-    patron.forEach((fila, y) => {
-      fila.forEach((valor, x) => {
-        if (valor === 1) graphics.fillRect(x * cell, y * cell, cell, cell);
-      });
-    });
-    graphics.generateTexture(clave, patron[0].length * cell, patron.length * cell);
-    graphics.destroy();
-    return clave;
-  }
-
-  create() {
-    this.add.rectangle(240, 160, 480, 320, 0x000000, 0.9);
-
-    this.add.text(240, 50, 'FIN DE LA PARTIDA', {
-      fontSize: '30px', fill: '#ff2222', fontStyle: 'bold', stroke: '#000000', strokeThickness: 5
-    }).setOrigin(0.5);
-
-    const claveCalavera = this.crearTexturaCalavera();
-    this.add.image(240, 125, claveCalavera).setScale(1.2);
-
-    this.add.text(240, 195, 'Puntuación:', {
-      fontSize: '18px', fill: '#ffffff', fontStyle: 'bold'
-    }).setOrigin(0.5);
-    this.add.text(240, 222, `${this.puntos}`, {
-      fontSize: '26px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4
-    }).setOrigin(0.5);
-
-    const btnVolver = this.add.text(240, 270, 'Volver al menú', {
-      fontSize: '22px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    btnVolver.on('pointerover', () => btnVolver.setScale(1.1));
-    btnVolver.on('pointerout', () => btnVolver.setScale(1));
-    btnVolver.on('pointerdown', () => { this.scene.start('MenuSeleccion'); });
-  }
-}
-
-// ==============================================================================
 // COMPONENTE REACT PRINCIPAL
 // ==============================================================================
 const CONTROLES_POR_DEFECTO = { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
@@ -1619,11 +1531,7 @@ export default function App() {
         default: 'arcade',
         arcade: { gravity: { y: 800 }, debug: false }
       },
-<<<<<<< HEAD
       scene: [MenuScene, MenuSeleccion, MejorasScene, NivelUnoScene, GameScene, PauseScene, GameOverScene] 
-=======
-      scene: [MenuScene, MenuSeleccion, MejorasScene, NivelUnoScene, GameScene, PauseScene, GameOverScene]
->>>>>>> 6d7256c9da07f97f9e3af90cc1e801dec0ea75af
     };
     const game = new Phaser.Game(config);
     gameInstanceRef.current = game;
