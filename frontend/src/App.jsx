@@ -157,6 +157,19 @@ class Shuri extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y
 class Tyson extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y, 'Tyson_idle'); } }
 class Frog extends PersonajeBase { constructor(scene, x, y) { super(scene, x, y, 'Frog_idle'); } }
 
+// Replica en el cliente la misma fórmula que backend/utils/calcularPuntaje.js,
+// para poder mostrar el puntaje en la pantalla de "Fin de la partida" al
+// instante, sin esperar la respuesta del servidor y también cuando se juega
+// sin sesión iniciada (caso en el que el puntaje nunca llega a enviarse).
+const PUNTOS_POR_NIVEL = 1000;
+const PENALIZACION_POR_SEGUNDO = 2;
+const PENALIZACION_POR_DANO = 5;
+function calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido }) {
+  const puntos = nivelAlcanzado * PUNTOS_POR_NIVEL - tiempoSegundos * PENALIZACION_POR_SEGUNDO - danoRecibido * PENALIZACION_POR_DANO;
+  return Math.max(Math.round(puntos), 0);
+}
+
+
 // ==============================================================================
 // ==============================================================================
 // ESCENA 1: NIVEL INICIAL (mapa_1.tmj)
@@ -355,11 +368,14 @@ class NivelUnoScene extends Phaser.Scene {
   }
 
   enviarPuntaje(nivelAlcanzado) {
-    if (!this.registry.get('usuarioActual')) return;
     const tiempoSegundos = Math.round((this.time.now - this.tiempoInicio) / 1000);
-    api.post('/scores', {
-      nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal
-    }).catch(err => console.error('No se pudo guardar el puntaje:', err));
+    const puntos = calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal });
+    if (this.registry.get('usuarioActual')) {
+      api.post('/scores', {
+        nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal
+      }).catch(err => console.error('No se pudo guardar el puntaje:', err));
+    }
+    return puntos;
   }
 
   update() {
@@ -393,9 +409,7 @@ class NivelUnoScene extends Phaser.Scene {
             this.player.setPosition(this.spawnX, this.spawnY);
             this.player.setVelocity(0, 0);
             this.player.setTint(0xff6600);
-            this.enviarPuntaje(0);
-            setTimeout(() => alert('¡Te quemaste en la lava!'), 50);
-            this.scene.start('MenuSeleccion');
+            this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
             return;
           }
 
@@ -409,9 +423,7 @@ class NivelUnoScene extends Phaser.Scene {
             this.player.setVelocity(0, 0);
             this.player.setTint(0xff0000);
             if (this.playerHealth <= 0) {
-              this.enviarPuntaje(0);
-              setTimeout(() => alert('¡Perdiste toda la vida!'), 50);
-              this.scene.start('MenuSeleccion');
+              this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) });
               return;
             }
             break;
@@ -869,6 +881,13 @@ class GameScene extends Phaser.Scene {
     this.load.spritesheet(`${char}_double-jump`, `assets/animaciones/Main_Characters/${char}/Double Jump (32x32).png`, { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet(`${char}_wall-jump`, `assets/animaciones/Main_Characters/${char}/Wall Jump (32x32).png`, { frameWidth: 32, frameHeight: 32 });
 
+    // Sprites del jefe (Flying Demon) — frameWidth:81, frameHeight:71
+    this.load.spritesheet('boss_idle',   'assets/Boss/IDLE.png',   { frameWidth: 81, frameHeight: 71 });
+    this.load.spritesheet('boss_flying', 'assets/Boss/FLYING.png', { frameWidth: 81, frameHeight: 71 });
+    this.load.spritesheet('boss_attack', 'assets/Boss/ATTACK.png', { frameWidth: 81, frameHeight: 71 });
+    this.load.spritesheet('boss_hurt',   'assets/Boss/HURT.png',   { frameWidth: 81, frameHeight: 71 });
+    this.load.spritesheet('boss_death',  'assets/Boss/DEATH.png',  { frameWidth: 81, frameHeight: 71 });
+
     // CARGAMOS EL MAPA DEL COMPAÑERO
     this.load.image('tiles-terrain', 'assets/Terrain (16x16).png');
     this.load.image('tiles-lava', 'assets/MAGAMA.png'); 
@@ -977,9 +996,7 @@ class GameScene extends Phaser.Scene {
             this.player.setTint(0xffa500);
             this.time.delayedCall(300, () => this.player.clearTint());
             if (this.playerHealth <= 0) {
-                this.enviarPuntaje(0); // murió: nivelAlcanzado simbólico = 0
-                setTimeout(() => alert("¡Te quemaste en la lava!"), 50);
-                this.scene.start('MenuSeleccion'); 
+                this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) }); 
             }
         });
     }
@@ -1040,26 +1057,48 @@ class GameScene extends Phaser.Scene {
     });
 
     // ==========================================================
-    // EL JEFE Y SUS FASES 
+    // EL JEFE — Flying Demon (sprite animado)
     // ==========================================================
-    const bossGrafico = this.add.graphics();
-    bossGrafico.fillStyle(0x800080, 1).fillRect(0, 0, 40, 40);
-    bossGrafico.generateTexture('bossTextura', 40, 40);
-    bossGrafico.destroy();
 
-    this.boss = this.physics.add.sprite(240, 80, 'bossTextura');
+    // Animaciones del demonio
+    if (!this.anims.exists('boss_idle'))   this.anims.create({ key: 'boss_idle',   frames: this.anims.generateFrameNumbers('boss_idle',   { start: 0, end: 3 }), frameRate: 8,  repeat: -1 });
+    if (!this.anims.exists('boss_flying')) this.anims.create({ key: 'boss_flying', frames: this.anims.generateFrameNumbers('boss_flying', { start: 0, end: 3 }), frameRate: 8,  repeat: -1 });
+    if (!this.anims.exists('boss_attack')) this.anims.create({ key: 'boss_attack', frames: this.anims.generateFrameNumbers('boss_attack', { start: 0, end: 7 }), frameRate: 12, repeat: -1 });
+    if (!this.anims.exists('boss_hurt'))   this.anims.create({ key: 'boss_hurt',   frames: this.anims.generateFrameNumbers('boss_hurt',   { start: 0, end: 3 }), frameRate: 10, repeat:  0 });
+    if (!this.anims.exists('boss_death'))  this.anims.create({ key: 'boss_death',  frames: this.anims.generateFrameNumbers('boss_death',  { start: 0, end: 6 }), frameRate: 8,  repeat:  0 });
+
+    this.boss = this.physics.add.sprite(240, 80, 'boss_idle');
+    this.boss.setScale(1.5);                     // lo hacemos un poco más grande en pantalla
     this.boss.body.setAllowGravity(false);
     this.boss.setCollideWorldBounds(true);
-    this.boss.setBounce(1); 
+    this.boss.setBounce(1);
+    // Ajustamos hitbox al cuerpo real del demonio (el frame tiene bastante padding)
+    this.boss.body.setSize(50, 55);
+    this.boss.body.setOffset(15, 10);
+    this.boss.anims.play('boss_flying');
 
-    this.bossHealth = 300; 
-    this.bossPhase = 1;     
+    this.bossHealth  = 300;
+    this.bossPhase   = 1;
+    this.bossIsDying = false;   // flag para bloquear más daño durante la animación de muerte
     if(capaTerreno) this.physics.add.collider(this.boss, capaTerreno);
 
+    // Movimiento aleatorio del jefe cada 2s
     this.time.addEvent({
-      delay: 2000, 
+      delay: 2000,
       callback: () => {
-        if (this.boss.active) this.boss.setVelocity(Phaser.Math.Between(-150, 150), Phaser.Math.Between(-150, 150));
+        if (this.boss.active && !this.bossIsDying) {
+          const vx = Phaser.Math.Between(-150, 150);
+          const vy = Phaser.Math.Between(-150, 150);
+          this.boss.setVelocity(vx, vy);
+          // Voltear sprite según dirección horizontal
+          this.boss.flipX = vx < 0;
+          // En fase 2 el jefe ataca mientras vuela
+          if (this.bossPhase === 2) {
+            this.boss.anims.play('boss_attack', true);
+          } else {
+            this.boss.anims.play('boss_flying', true);
+          }
+        }
       }, loop: true
     });
 
@@ -1069,7 +1108,7 @@ class GameScene extends Phaser.Scene {
     this.bossShootTimer = this.time.addEvent({
       delay: 150, 
       callback: () => {
-        if (this.boss && this.boss.active) {
+        if (this.boss && this.boss.active && !this.bossIsDying) {
           const bullet = this.bossBullets.get(this.boss.x, this.boss.y);
           if (bullet) {
             bullet.setActive(true).setVisible(true);
@@ -1095,7 +1134,6 @@ class GameScene extends Phaser.Scene {
                 this.time.delayedCall(1500, () => {
                     if (this.bossPhase !== 2) return; 
                     if(blinkTween) blinkTween.stop();
-                    
                     this.tarimas[indiceTarimaActual].setVisible(false);
                     this.colTarimas[indiceTarimaActual].active = false;
                     this.tarimas[nextIndex].setAlpha(1);
@@ -1164,30 +1202,38 @@ class GameScene extends Phaser.Scene {
       player.setTint(0xff0000);
       this.time.delayedCall(200, () => player.clearTint());
       if (this.playerHealth <= 0) {
-        this.enviarPuntaje(0); // murió: nivelAlcanzado simbólico = 0
-        setTimeout(() => alert("¡Te mató el jefe!"), 50);
-        this.scene.start('MenuSeleccion'); 
+        this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(0) }); 
       }
     });
 
-    // DAÑO AL JEFE Y VICTORIA (Con tus Stats y Experiencia)
+    // DAÑO AL JEFE Y VICTORIA
     this.physics.add.overlap(this.boss, this.bullets, (boss, bullet) => {
+      if (this.bossIsDying) return;   // ignorar balas durante la muerte
       bullet.destroy();
-      this.bossHealth -= this.estadisticas.danoActual; // USA TU DAÑO
-      
-      boss.setTint(0xff0000);
-      this.time.delayedCall(100, () => boss.clearTint());
+      this.bossHealth -= this.estadisticas.danoActual;
+
+      // Animación de daño (hurt) — vuelve a flying cuando termina
+      boss.anims.play('boss_hurt', true);
+      boss.once('animationcomplete-boss_hurt', () => {
+        if (!this.bossIsDying) boss.anims.play('boss_flying', true);
+      });
+
       if (this.bossHealth <= 0) {
-        boss.destroy();
-        this.cameras.main.setBackgroundColor('#87CEEB'); 
-        
-        const expGanada = 150;
-        this.estadisticas.ganarExperiencia(expGanada);
-        this.gestor.guardarProgreso();
-        this.enviarPuntaje(1); // venció al jefe: nivelAlcanzado simbólico = 1
-        
-        setTimeout(() => alert(`¡Venciste al jefe! Has ganado ${expGanada} EXP.`), 50);
-        this.scene.start('MenuSeleccion'); 
+        // ---- Muerte del jefe ----
+        this.bossIsDying = true;
+        this.bossShootTimer.paused = true;
+        boss.setVelocity(0, 0);
+        boss.body.setAllowGravity(false);
+
+        boss.anims.play('boss_death', true);
+        boss.once('animationcomplete-boss_death', () => {
+          boss.destroy();
+          this.cameras.main.setBackgroundColor('#87CEEB');
+          const expGanada = 150;
+          this.estadisticas.ganarExperiencia(expGanada);
+          this.gestor.guardarProgreso();
+          this.scene.start('GameOverScene', { puntos: this.enviarPuntaje(1) });
+        });
       }
     });
 
@@ -1207,17 +1253,20 @@ class GameScene extends Phaser.Scene {
   // Solo se envía si hay un usuario logueado (user !== null); si juega
   // sin cuenta, el progreso simplemente no se guarda en el backend.
   enviarPuntaje(nivelAlcanzado) {
-    if (!this.registry.get('usuarioActual')) return;
-
     const tiempoSegundos = Math.round((this.time.now - this.tiempoInicio) / 1000);
+    const puntos = calcularPuntajeCliente({ nivelAlcanzado, tiempoSegundos, danoRecibido: this.danoRecibidoTotal });
 
-    api.post('/scores', {
-      nivelAlcanzado,
-      tiempoSegundos,
-      danoRecibido: this.danoRecibidoTotal
-    }).catch((error) => {
-      console.error('No se pudo guardar el puntaje:', error);
-    });
+    if (this.registry.get('usuarioActual')) {
+      api.post('/scores', {
+        nivelAlcanzado,
+        tiempoSegundos,
+        danoRecibido: this.danoRecibidoTotal
+      }).catch((error) => {
+        console.error('No se pudo guardar el puntaje:', error);
+      });
+    }
+
+    return puntos;
   }
 
   // ==========================================================
@@ -1320,6 +1369,74 @@ class GameScene extends Phaser.Scene {
 }
 
 // ==============================================================================
+// ESCENA 6: FIN DE LA PARTIDA (reemplaza los alert() de muerte y victoria)
+// ==============================================================================
+class GameOverScene extends Phaser.Scene {
+  constructor() { super({ key: 'GameOverScene' }); }
+
+  init(data) {
+    this.puntos = data.puntos ?? 0;
+    this.esVictoria = (data.puntos ?? 0) > 0;
+  }
+
+  crearTexturaCalavera() {
+    const clave = 'calaveraPixel';
+    if (this.textures.exists(clave)) return clave;
+    const patron = [
+      [0,0,0,0,1,1,1,1,1,0,0,0,0],
+      [0,0,1,1,1,1,1,1,1,1,1,0,0],
+      [0,1,1,1,1,1,1,1,1,1,1,1,0],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,2,2,1,1,1,1,1,2,2,1,1],
+      [1,1,2,2,1,1,1,1,1,2,2,1,1],
+      [1,1,1,1,1,2,1,2,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [0,1,1,1,1,1,1,1,1,1,1,1,0],
+      [0,1,2,1,2,1,2,1,2,1,2,1,0],
+      [0,0,1,1,1,1,1,1,1,1,1,0,0],
+      [0,0,0,1,1,1,1,1,1,1,0,0,0]
+    ];
+    const cell = 6;
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 1);
+    patron.forEach((fila, y) => fila.forEach((v, x) => { if (v === 1) g.fillRect(x*cell, y*cell, cell, cell); }));
+    g.generateTexture(clave, patron[0].length * cell, patron.length * cell);
+    g.destroy();
+    return clave;
+  }
+
+  create() {
+    this.add.rectangle(240, 160, 480, 320, 0x000000, 0.92);
+
+    if (this.esVictoria) {
+      this.add.text(240, 50, '¡VICTORIA!', {
+        fontSize: '34px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 5
+      }).setOrigin(0.5);
+      this.add.text(240, 120, '👹', { fontSize: '52px' }).setOrigin(0.5);
+    } else {
+      this.add.text(240, 50, 'FIN DE LA PARTIDA', {
+        fontSize: '26px', fill: '#ff2222', fontStyle: 'bold', stroke: '#000000', strokeThickness: 5
+      }).setOrigin(0.5);
+      this.add.image(240, 120, this.crearTexturaCalavera()).setScale(1.2);
+    }
+
+    this.add.text(240, 195, 'Puntuación:', {
+      fontSize: '18px', fill: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.add.text(240, 222, `${this.puntos}`, {
+      fontSize: '28px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4
+    }).setOrigin(0.5);
+
+    const btnVolver = this.add.text(240, 272, 'Volver al menú', {
+      fontSize: '22px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    btnVolver.on('pointerover', () => btnVolver.setScale(1.1));
+    btnVolver.on('pointerout',  () => btnVolver.setScale(1));
+    btnVolver.on('pointerdown', () => this.scene.start('MenuSeleccion'));
+  }
+}
+
+// ==============================================================================
 // ESCENA 5: MENÚ DE PAUSA
 // ==============================================================================
 class PauseScene extends Phaser.Scene {
@@ -1363,7 +1480,7 @@ class PauseScene extends Phaser.Scene {
 const CONTROLES_POR_DEFECTO = { ARRIBA: 'W', IZQUIERDA: 'A', ABAJO: 'S', DERECHA: 'D' };
 
 // Escenas donde se muestra el botón de pantalla completa
-const ESCENAS_CON_BOTON_FULLSCREEN = ['MenuScene', 'MenuSeleccion', 'MejorasScene', 'PauseScene'];
+const ESCENAS_CON_BOTON_FULLSCREEN = ['MenuScene', 'MenuSeleccion', 'MejorasScene', 'PauseScene', 'GameOverScene'];
 
 export default function App() {
   const gameRef        = useRef(null);
@@ -1404,7 +1521,7 @@ export default function App() {
         default: 'arcade',
         arcade: { gravity: { y: 800 }, debug: false }
       },
-      scene: [MenuScene, MenuSeleccion, MejorasScene, NivelUnoScene, GameScene, PauseScene] 
+      scene: [MenuScene, MenuSeleccion, MejorasScene, NivelUnoScene, GameScene, PauseScene, GameOverScene] 
     };
     const game = new Phaser.Game(config);
     gameInstanceRef.current = game;
