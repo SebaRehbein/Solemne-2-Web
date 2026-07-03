@@ -1339,7 +1339,7 @@ class GameScene extends Phaser.Scene {
     this.boss.body.setOffset(15, 10);
     this.boss.anims.play('boss_flying');
 
-    this.bossHealth  = 300;
+    this.bossHealth  = 4000;
     this.bossPhase   = 1;
     this.bossIsDying = false;   // flag para bloquear más daño durante la animación de muerte
     if(capaTerreno) this.physics.add.collider(this.boss, capaTerreno);
