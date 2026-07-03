@@ -294,19 +294,25 @@ class NivelUnoScene extends Phaser.Scene {
       }
     });
 
-    // Daño con pinchos
+    // Daño con pinchos y lava
+    // gid 243 = lava (muerte instantánea), 244 = pincho arriba, 245 = pincho abajo
     this.tiempoUltimoDano = -99999;
     this.DURACION_INV     = 600;
-    this.GIDS_PINCHO      = [244, 245];
+    this.GIDS_PINCHO      = [244, 245]; // pinchos: restan 20 vida
+    this.GIDS_LAVA        = [243];      // lava: muerte instantánea
     this.capaTrampasRef   = capaTrampas;
     this.spawnX           = spawnX;
     this.spawnY           = spawnY;
 
-    // Zona de salida (chequeo manual en update)
+    // Zona de salida — ampliamos el rect 8px en cada lado para compensar
+    // posibles offsets del body y hacer la zona más fácil de activar
     const zonaSalidaObj = capaEntidades?.objects.find(obj => obj.name === 'zona_salida');
+    const MARGEN_ZONA = 8;
     this.zonaSalidaRect = zonaSalidaObj ? {
-      left: zonaSalidaObj.x, right: zonaSalidaObj.x + zonaSalidaObj.width,
-      top:  zonaSalidaObj.y, bottom: zonaSalidaObj.y + zonaSalidaObj.height
+      left:   zonaSalidaObj.x - MARGEN_ZONA,
+      right:  zonaSalidaObj.x + zonaSalidaObj.width  + MARGEN_ZONA,
+      top:    zonaSalidaObj.y - MARGEN_ZONA,
+      bottom: zonaSalidaObj.y + zonaSalidaObj.height + MARGEN_ZONA
     } : null;
 
     // Controles
@@ -364,7 +370,7 @@ class NivelUnoScene extends Phaser.Scene {
       this.player.clearTint();
     }
 
-    // Pinchos
+    // Pinchos y lava
     {
       const cuerpo = this.player.body;
       const ahora  = this.time.now;
@@ -376,7 +382,25 @@ class NivelUnoScene extends Phaser.Scene {
         ];
         for (const [px, py] of puntos) {
           const tile = this.capaTrampasRef.getTileAtWorldXY(px, py, true);
-          if (tile && this.GIDS_PINCHO.includes(tile.index)) {
+          if (!tile) continue;
+
+          // Lava (gid 243): muerte instantánea, vuelve al spawn
+          if (this.GIDS_LAVA.includes(tile.index)) {
+            this.tiempoUltimoDano   = ahora;
+            this.danoRecibidoTotal += this.playerHealth;
+            this.playerHealth       = 0;
+            this.updateHealthBar();
+            this.player.setPosition(this.spawnX, this.spawnY);
+            this.player.setVelocity(0, 0);
+            this.player.setTint(0xff6600);
+            this.enviarPuntaje(0);
+            setTimeout(() => alert('¡Te quemaste en la lava!'), 50);
+            this.scene.start('MenuSeleccion');
+            return;
+          }
+
+          // Pinchos (gid 244/245): restan 20 vida, vuelven al spawn
+          if (this.GIDS_PINCHO.includes(tile.index)) {
             this.tiempoUltimoDano   = ahora;
             this.playerHealth      -= 20;
             this.danoRecibidoTotal += 20;
@@ -396,12 +420,14 @@ class NivelUnoScene extends Phaser.Scene {
       }
     }
 
-    // Zona de salida
+    // Zona de salida — chequeamos bordes del body además del centro
     if (this.zonaSalidaRect) {
-      const cx = this.player.body.center.x;
-      const cy = this.player.body.center.y;
+      const b  = this.player.body;
       const z  = this.zonaSalidaRect;
-      if (cx > z.left && cx < z.right && cy > z.top && cy < z.bottom) {
+      // Cualquier punto del body que entre en la zona activa la transición
+      const dentroX = b.right > z.left && b.left < z.right;
+      const dentroY = b.bottom > z.top && b.top < z.bottom;
+      if (dentroX && dentroY) {
         this.scene.start('GameScene', { personaje: this.personajeSeleccionado });
         return;
       }
